@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.concurrent.*;
 
 /**
  * Uses the hardware timer to provide preemption, and to allow threads to sleep
@@ -64,8 +65,27 @@ public class Alarm {
     }
   }
 
+  private static class PingTest implements Runnable {
+    private int which;
+    long durations[] = {500, 1500, 2500};
+
+    PingTest(int which) {
+      this.which = which;
+    }
+
+    public void run() {
+      for (int i = 0; i < 3; i++) {
+        waitUntil(durations[i]);
+        System.out.println("*** thread " + which + " waited for " + durations[i] + " milliseconds");
+      }
+    }
+  }
+
   // Invoked from ThreadedKernel.selfTest()
   public static void selfTest() {
     alarmTest1();
+
+    new KThread(new PingTest(1)).setName("forked thread").fork();
+    new PingTest(0).run();
   }
 }
