@@ -29,6 +29,12 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
+
+	  // Check if it is the wake time yet
+		if( wakeTime <= Machine.timer().getTime() && wakeTime != -1) { 
+		  alarmCallerThread.ready();
+			wakeTime = -1;      
+	  }
 		KThread.currentThread().yield();
 	}
 
@@ -47,19 +53,24 @@ public class Alarm {
 	public void waitUntil(long x) {
 	  
 		// If wait time is negative or zero, return without waiting
-		if( x < 0 ) x = 0;
-		// for now, cheat just to get something working (busy waiting is bad)
-		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
-	}
+		if( x <= 0 ) return;
+    wakeTime = Machine.timer().getTime() + x; // Getting the waitup time
+    
+		// Put the current thread to sleep
+		alarmCallerThread = KThread.currentThread();
+    
+		Machine.interrupt().disable();
+		alarmCallerThread.sleep();
 
-  // Alarm testing code
+  }
+		
+	// Alarm testing code
   public static void alarmTest1() {
     int durations[] = {1000, 10*1000, 100*1000};
     long t0, t1;
 
     for (int d: durations) {
+		  System.out.println( "alarmTest1: wait for " + d + " ticks" );
       t0 = Machine.timer().getTime();
       ThreadedKernel.alarm.waitUntil(d);
       t1 = Machine.timer().getTime();
@@ -67,8 +78,12 @@ public class Alarm {
     }
   }
 
+
   // Invoked from ThreadedKernel.selfTest()
   public static void selfTest() {
     alarmTest1();
   }
+
+	long wakeTime = -1;
+	KThread alarmCallerThread = null;
 }

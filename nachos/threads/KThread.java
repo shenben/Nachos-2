@@ -250,8 +250,10 @@ public class KThread {
 	public static void sleep() {
 		Lib.debug(dbgThread, "Sleeping thread: " + currentThread.toString());
 
+System.err.println( "Line 253" ) ;
 		Lib.assertTrue(Machine.interrupt().disabled());
 
+System.err.println( "Line 256" );
 		if (currentThread.status != statusFinished)
 			currentThread.status = statusBlocked;
 
