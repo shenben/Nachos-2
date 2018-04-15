@@ -64,24 +64,39 @@ public class Alarm {
 
   }
 		
-	// Alarm testing code
-  public static void alarmTest1() {
+	/* Alarm testing code */
+
+  public static void alarmTestNormal() {
     int durations[] = {1000, 10*1000, 100*1000};
     long t0, t1;
 
     for (int d: durations) {
-		  System.out.println( "alarmTest1: wait for " + d + " ticks" );
+		  System.out.println( "alarmTestNormal: wait for " + d + " ticks" );
       t0 = Machine.timer().getTime();
       ThreadedKernel.alarm.waitUntil(d);
       t1 = Machine.timer().getTime();
-      System.out.println("alarmTest1: waited for " + (t1 - t0) + " ticks");
+      System.out.println("alarmTestNormal: waited for " + (t1 - t0) + " ticks");
     }
   }
 
+	public static void alarmTestNegative() {
+    int negativeDurs[] = { -1, -100, -1000 };
+		long t0, t1;
+
+		for( int d: negativeDurs ) {
+      System.out.println( "alarmTestNegative: wait for " + d + " ticks" );
+			t0 = Machine.timer().getTime();
+			ThreadedKernel.alarm.waitUntil(d);
+			t1 = Machine.timer().getTime();
+			System.out.println( "alarmTestNegative: waited for " + ( t1- t0 )
+			                     + " ticks" );
+		}
+	}
 
   // Invoked from ThreadedKernel.selfTest()
   public static void selfTest() {
-    alarmTest1();
+    alarmTestNormal();
+		alarmTestNegative();
   }
 
 	long wakeTime = -1;
