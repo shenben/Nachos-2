@@ -68,6 +68,7 @@ public class Alarm {
   private static class PingTest implements Runnable {
     private int which;
     long durations[] = {500, 1500, 2500};
+    long t0, t1;
 
     PingTest(int which) {
       this.which = which;
@@ -75,8 +76,10 @@ public class Alarm {
 
     public void run() {
       for (int i = 0; i < 3; i++) {
-        waitUntil(durations[i]);
-        System.out.println("*** thread " + which + " waited for " + durations[i] + " milliseconds");
+        t0 = Machine.timer().getTime();
+        ThreadedKernel.alarm.waitUntil(durations[i]);
+        t1 = Machine.timer().getTime();
+        System.out.println("*** thread " + which + " waited for " + (t1 - t0) + " milliseconds");
       }
     }
   }
