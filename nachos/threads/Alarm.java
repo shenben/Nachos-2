@@ -30,6 +30,14 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
+
+	  // Check if it is the wake time yet
+		if( wakeTime <= Machine.timer().getTime() && wakeTime != -1) { 
+      Machine.interrupt().disable();
+		  alarmCallerThread.ready();
+      Machine.interrupt().enable();
+			wakeTime = -1;      
+	  }
 		KThread.currentThread().yield();
 	}
 
@@ -46,28 +54,52 @@ public class Alarm {
 	 * @see nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
-		// for now, cheat just to get something working (busy waiting is bad)
-		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
-	}
+	  
+		// If wait time is negative or zero, return without waiting
+		if( x <= 0 ) return;
+    wakeTime = Machine.timer().getTime() + x; // Getting the waitup time
+    
+		// Put the current thread to sleep
+		alarmCallerThread = KThread.currentThread();
+    
+		Machine.interrupt().disable();
+		alarmCallerThread.sleep();
+    Machine.interrupt().enable();
 
-  // Alarm testing code
-  public static void alarmTest1() {
+  }
+		
+	/* Alarm testing code */
+
+  public static void alarmTestNormal() {
     int durations[] = {1000, 10*1000, 100*1000};
     long t0, t1;
 
-    for (int d: durations) {
+    for ( int d: durations ) {
+		  System.out.println( "alarmTestNormal: wait for " + d + " ticks" );
       t0 = Machine.timer().getTime();
       ThreadedKernel.alarm.waitUntil(d);
       t1 = Machine.timer().getTime();
-      System.out.println("alarmTest1: waited for " + (t1 - t0) + " ticks");
+      System.out.println("alarmTestNormal: waited for " + (t1 - t0) + " ticks");
     }
   }
 
+	public static void alarmTestNegative() {
+    int negativeDurs[] = { -1, -100, -1000 };
+		long t0, t1;
+
+		for( int d: negativeDurs ) {
+      System.out.println( "alarmTestNegative: wait for " + d + " ticks" );
+			t0 = Machine.timer().getTime();
+			ThreadedKernel.alarm.waitUntil(d);
+			t1 = Machine.timer().getTime();
+			System.out.println( "alarmTestNegative: waited for " + ( t1- t0 )
+			                     + " ticks" );
+		}
+	}
+
   private static class PingTest implements Runnable {
     private int which;
-    long durations[] = {500, 1500, 2500};
+    long durations[] = {1000, 10*1000, 100*1000};
     long t0, t1;
 
     PingTest(int which) {
@@ -75,20 +107,27 @@ public class Alarm {
     }
 
     public void run() {
-      for (int i = 0; i < 3; i++) {
+      for ( long d: durations ) {
+        System.out.println("thread " + which + ": wait for " + d + " ticks");
         t0 = Machine.timer().getTime();
-        ThreadedKernel.alarm.waitUntil(durations[i]);
+        ThreadedKernel.alarm.waitUntil(d);
         t1 = Machine.timer().getTime();
-        System.out.println("*** thread " + which + " waited for " + (t1 - t0) + " milliseconds");
+        System.out.println("thread " + which + ": waited for " + (t1 - t0) + " ticks");
       }
     }
   }
 
   // Invoked from ThreadedKernel.selfTest()
   public static void selfTest() {
-    alarmTest1();
-
+    System.out.println("... Normal Tests ...");
+    alarmTestNormal();
+    System.out.println("... Negative Tests ...");
+		alarmTestNegative();
+    System.out.println("... Threaded Tests ...");
     new KThread(new PingTest(1)).setName("forked thread").fork();
     new PingTest(0).run();
   }
+
+	long wakeTime = -1;
+	KThread alarmCallerThread = null;
 }
