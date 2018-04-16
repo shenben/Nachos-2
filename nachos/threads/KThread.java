@@ -151,7 +151,6 @@ public class KThread {
 
 		Lib.debug(dbgThread, "Forking thread: " + toString() + " Runnable: "
 				+ target);
-
 		boolean intStatus = Machine.interrupt().disable();
 
 		tcb.start(new Runnable() {
@@ -206,7 +205,7 @@ public class KThread {
 		sleep();
 	}
 
-	/**
+	/*
 	 * Relinquish the CPU if any other thread is ready to run. If so, put the
 	 * current thread on the ready queue, so that it will eventually be
 	 * rescheuled.
