@@ -202,6 +202,9 @@ public class KThread {
 		toBeDestroyed = currentThread;
 
 		currentThread.status = statusFinished;
+    
+    threadToWake.ready(); // Wake thread that called join() on this
+    // TODO need to reset join_called?
 
 		sleep();
 	}
@@ -285,6 +288,14 @@ public class KThread {
 
 		Lib.assertTrue(this != currentThread); // Thread cannot joint itself
 
+    Lib.assertTrue(this.join_called != true); // Call join on thread at most once
+
+    this.join_called = true;
+
+    if (this.status != statusFinished) {
+      currentThread.sleep();
+      this.threadToWake = currentThread;
+    }
 
 	}
 
@@ -466,4 +477,9 @@ public class KThread {
 	private static KThread toBeDestroyed = null;
 
 	private static KThread idleThread = null;
+
+  /** Keep track of join() calls */
+  private KThread threadToWake = null;
+
+  private boolean join_called = false;
 }
