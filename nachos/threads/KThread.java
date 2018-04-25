@@ -204,11 +204,9 @@ System.out.println( " in finish by thread " + currentThread.toString());
 
 		currentThread.status = statusFinished;
     
-System.out.println( currentThread.toString() + " is finished? in finish " + (currentThread.status == statusFinished) );
 		// If the threadToWait is not null
 		if( joinThreads.containsKey( currentThread ) 
 		    && joinThreads.get(currentThread ) != null ) {
-System.out.println( "System releasing join()." );
 			joinThreads.get( currentThread ).ready(); // Put the thread back on the ready queue
 			joinThreads.remove( currentThread );
 		}
@@ -262,7 +260,6 @@ System.out.println( "System releasing join()." );
 
 		Lib.assertTrue(Machine.interrupt().disabled());
 
-System.out.println( currentThread.toString() + " finished? in sleep " + (currentThread.status == statusFinished ));
 		if (currentThread.status != statusFinished)
 			currentThread.status = statusBlocked;
 
@@ -444,12 +441,14 @@ System.out.println( currentThread.toString() + " finished? in sleep " + (current
 		new PingTest(0).run();
 
 		// Simple test for join()
-		System.out.println( "Testing join()." );
+		System.out.println( "\nTesting join()." );
 		System.out.println( "\nSimple test when child finishes before join()." );
 		joinTestSimple();
 
 		System.out.println( "\nTest when child has not finsihed when join()." );
 		joinTestRunning();
+
+		System.out.println("Finish testing join()\n");
 	}
 
 
@@ -500,8 +499,6 @@ System.out.println( currentThread.toString() + " finished? in sleep " + (current
       System.out.println( "I am executing..." );
 			if( i == 1 ) {
 			  child1.join();
-				System.out.println( " returned from join(). Child one finished? " + 
-				                      ( child1.status == statusFinished ));
 			}
 		}
 
