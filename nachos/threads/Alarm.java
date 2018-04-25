@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+<<<<<<< HEAD
 import java.util.*;
 
 /*
@@ -8,6 +9,9 @@ import java.util.*;
  * How to iterate through a java hashmap:
  * stackoverflow.com/questions/1066589/iterate-through-a-hashmap
  */
+=======
+import java.util.concurrent.*;
+>>>>>>> 7d438fcc97c599c66d9e08ea783744d08fe99c02
 
 /**
  * Uses the hardware timer to provide preemption, and to allow threads to sleep
@@ -37,6 +41,7 @@ public class Alarm {
 	 */
 	public void timerInterrupt() {
 
+<<<<<<< HEAD
     if( threads.isEmpty() ) return;
     // Iterate through the hashmap to get all the threads that have a wake
 		// time earlier than curren time
@@ -53,6 +58,15 @@ public class Alarm {
 			else break;
 		}
     
+=======
+	  // Check if it is the wake time yet
+		if( wakeTime <= Machine.timer().getTime() && wakeTime != -1) { 
+      Machine.interrupt().disable();
+		  alarmCallerThread.ready();
+      Machine.interrupt().enable();
+			wakeTime = -1;      
+	  }
+>>>>>>> 7d438fcc97c599c66d9e08ea783744d08fe99c02
 		KThread.currentThread().yield();
 	}
 
@@ -94,7 +108,7 @@ public class Alarm {
     int durations[] = { 1000, 100, 10 };
 		long t0, t1;
 
-    for (int d: durations) {
+    for ( int d: durations ) {
 		  System.out.println( "alarmTestNormal: wait for " + d + " ticks" );
       t0 = Machine.timer().getTime();
       ThreadedKernel.alarm.waitUntil(d);
@@ -116,7 +130,6 @@ public class Alarm {
 			                     + " ticks" );
 		}
 	}
-
 
   /********* Ping Test class **************/
 	private static class PingTest implements Runnable {
@@ -148,9 +161,12 @@ public class Alarm {
     new KThread(new PingTest(1)).fork();
 		new PingTest(0).run();
 	}
+
   // Invoked from ThreadedKernel.selfTest()
   public static void selfTest() {
+    System.out.println("... Normal Tests ...");
     alarmTestNormal();
+    System.out.println("... Negative Tests ...");
 		alarmTestNegative();
 		alarmTestTwoThreads();
   }
