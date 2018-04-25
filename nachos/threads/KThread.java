@@ -448,6 +448,12 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		System.out.println( "\nTest when child has not finsihed when join()." );
 		joinTestRunning();
 
+		System.out.println( "\nTest when we have two join()." );
+		joinTestTwoJoin();
+
+	//	System.out.println( "\nTest when we join two independent threads." );
+	//	joinTestReverse();
+
 		System.out.println("Finish testing join()\n");
 	}
 
@@ -503,8 +509,77 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		}
 
 		System.out.println( "Is child one finished? " + ( child1.status == statusFinished ));
-
 	}
+
+	/**
+	 * Test one thread join on two threads
+	 */
+	private static void joinTestTwoJoin() {
+    KThread child1 = new KThread( new Runnable() {
+        public void run() {
+          for( int i = 0 ; i < 5 ; i++ ){
+            System.out.println( "I am the first child!" );
+						//KThread.currentThread().yield();
+					}
+				}
+		  });
+
+		KThread child2 = new KThread( new Runnable() {
+        public void run() {
+          for( int i = 0 ; i < 5 ; i++ ) {
+            System.out.println( "I am the second child!" );
+						//KThread.currentThread().yield();
+					}
+				}
+		  });
+
+		child1.setName( "child1" ).fork();
+		child2.setName( "child2" ).fork();
+
+		//Busy waiting
+		for( int i = 0 ; i < 5 ; i++ ) {
+			if( i == 1 ) {
+			  child2.join();
+			  child1.join();
+			}
+			System.out.println( "I am executing..." );
+		}
+
+		System.out.println( "child1 finished? " + ( child1.status == statusFinished ));
+		System.out.println( "child2 finished? " + ( child2.status == statusFinished ));
+	}
+
+	/**
+	 * Test independent joining each other
+	 */
+	private static void joinTestReverse() {
+    KThread child1 = new KThread( new Runnable() {
+        public void run() {
+          for( int i = 0 ; i < 5 ; i++ ){
+            System.out.println( "I am the first child!" );
+						KThread.currentThread().yield();
+					}
+				}
+		  });
+
+		KThread child2 = new KThread( new Runnable() {
+        public void run() {
+          for( int i = 0 ; i < 5 ; i++ ) {
+					  if( i == 1 ) child1.join();
+            System.out.println( "I am the second child!" );
+						KThread.currentThread().yield();
+					}
+				}
+		  });
+
+		child1.setName( "child1" ).fork();
+		child2.setName( "child2" ).fork();
+	}
+
+	/**
+	 * Error testing
+	 */
+	private static 
 
 	private static final char dbgThread = 't';
 
