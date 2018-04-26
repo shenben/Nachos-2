@@ -134,3 +134,32 @@ nachos.machine.AssertionFailureError: expected match number of 1
 	at java.lang.Thread.run(Thread.java:748)
 
 
+------[ Thu Apr 26 10:30:05 2018 ]------
+
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	^
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	        ^
+2 errors
+
+
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	^
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	        ^
+2 errors
+
+
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	^
+/home/linux/ieng6/cs120s/public/autograder.dest/agproj1/run/yuz435_npopescu/nachos/threads/KThread.java:584: error: repeated modifier
+	private static final char dbgThread = 't';
+	        ^
+2 errors
+
+
