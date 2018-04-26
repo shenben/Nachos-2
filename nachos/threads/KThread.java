@@ -579,7 +579,7 @@ System.out.println( " in finish by thread " + currentThread.toString());
 	/**
 	 * Error testing
 	 */
-	private static 
+//	private static 
 
 	private static final char dbgThread = 't';
 
