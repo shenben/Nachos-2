@@ -49,6 +49,7 @@ public abstract class ThreadQueue {
 	 * on the processor; if a thread is waiting for a lock it should be
 	 * sleeping.
 	 * 
+	 * 
 	 * <p>
 	 * However, depending on the specific objects, it may be acceptable for a
 	 * thread to wait for access to one object while having access to another.

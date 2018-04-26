@@ -12,7 +12,6 @@ public class ThreadedKernel extends Kernel {
 	public ThreadedKernel() {
 		super();
 	}
-
 	/**
 	 * Initialize this kernel. Creates a scheduler, the first thread, and an
 	 * alarm, and enables interrupts. Creates a file system if necessary.
@@ -48,7 +47,8 @@ public class ThreadedKernel extends Kernel {
 	public void selfTest() {
 		KThread.selfTest();
 		Semaphore.selfTest();
-		SynchList.selfTest();
+  	SynchList.selfTest();
+    Alarm.selfTest();
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
