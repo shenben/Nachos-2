@@ -27,7 +27,7 @@ public class GameMatch {
     private int numWaiting = 0; // First impl step
     private int matchNum = 0;
 
-    private static int matchId = 0;
+    private static int matchId;
 
     private LinkedList<KThread> begQ;
     private LinkedList<KThread> intQ;
@@ -40,6 +40,7 @@ public class GameMatch {
      */
     public GameMatch (int numPlayersInMatch) {
       numPlayersNeeded = numPlayersInMatch;
+      matchId = 0;
       lock = new Lock();
 
       condBeginner = new Condition(lock);
@@ -73,12 +74,11 @@ public class GameMatch {
 			  lock.acquire();
 			  numWaitingB++;
 				if( numWaitingB == numPlayersNeeded ) {
-				  matchId++;
 					numWaitingB = 0;
-				  KThread.currentThread().setMatchNum(matchId);
+				  KThread.currentThread().setMatchNum(++matchId);
 				  condBeginner.wakeAll();
           for (int i = 0; i < numPlayersNeeded - 1; i++) {
-            begQ.get(i).setMatchNum(KThread.currentThread().getMatchNum());
+            begQ.poll().setMatchNum(KThread.currentThread().getMatchNum());
           }
 				}
 				else {
@@ -92,9 +92,11 @@ public class GameMatch {
 			  numWaitingI++;
 				if( numWaitingI == numPlayersNeeded ) {
           numWaitingI = 0;
-					matchId++;
-					this.matchNum = matchId;
+				  KThread.currentThread().setMatchNum(++matchId);
 					condInter.wakeAll();
+          for (int i = 0; i < numPlayersNeeded - 1; i++) {
+            intQ.poll().setMatchNum(KThread.currentThread().getMatchNum());
+          }
 				}
 				else {
           intQ.add(KThread.currentThread());
@@ -107,12 +109,13 @@ public class GameMatch {
 			  numWaitingE++;
 				if( numWaitingE == numPlayersNeeded ) {
           numWaitingE = 0;
-					matchId++;
-					this.matchNum = matchId;
+				  KThread.currentThread().setMatchNum(++matchId);
 					condExp.wakeAll();
+          for (int i = 0; i < numPlayersNeeded - 1; i++) {
+            expQ.poll().setMatchNum(KThread.currentThread().getMatchNum());
+          }
 				}
 				else {
-          System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
           expQ.add(KThread.currentThread());
 				  condExp.sleep();
 				}
@@ -192,6 +195,7 @@ public class GameMatch {
       KThread beg1 = new KThread( new Runnable() {
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
+          System.out.println("r: " + r);
           System.out.println("beg1 matched");
           Lib.assertTrue( r == 2, "expected a match number of 2" );
         }
@@ -201,6 +205,7 @@ public class GameMatch {
       KThread beg2 = new KThread( new Runnable() {
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
+          System.out.println("r: " + r);
           System.out.println("beg2 matched");
           Lib.assertTrue( r == 1, "expected a match number of 1" );
         }
@@ -211,6 +216,7 @@ public class GameMatch {
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg3 matched");
+          System.out.println("r: " + r);
           Lib.assertTrue( r == 2, "expected a match number of 2" );
         }
       });
@@ -301,7 +307,6 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg1 matched");
-		      // beginners should match with a match number of 1
 		      Lib.assertTrue(r == 1, "expected match number of 1");
 		    }
 	    });
@@ -311,7 +316,6 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg2 matched");
-		      // beginners should match with a match number of 1
 		      Lib.assertTrue(r == 1, "expected match number of 1");
 		    }
 	    });
@@ -343,15 +347,9 @@ public class GameMatch {
       beg2.fork();
 
       beg1.join();
-      int1.join();
-      exp1.join();
+      //int1.join();
+      //exp1.join();
       beg2.join();
-
-      // Assume join is not implemented, use yield to allow other
-      // threads to run
-      /*for (int i = 0; i < 10; i++) {
-          KThread.currentThread().yield();
-      }*/
     }
 
     /**
@@ -365,8 +363,7 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg1 matched");
-		      // beginners should match with a match number of 1
-		      Lib.assertTrue(r == 1, "expected match number of 1");
+		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
 	    beg1.setName("B1");
@@ -375,8 +372,7 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg2 matched");
-		      // beginners should match with a match number of 1
-		      Lib.assertTrue(r == 1, "expected match number of 1");
+		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
 	    beg2.setName("B2");
@@ -385,8 +381,7 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg3 matched");
-		      // beginners should match with a match number of 1
-		      Lib.assertTrue(r == 1, "expected match number of 1");
+		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
 	    beg3.setName("B3");
@@ -418,7 +413,7 @@ public class GameMatch {
 	    KThread exp1 = new KThread( new Runnable () {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityExpert);
-		      Lib.assertTrue(r == 2, "expected match number of 2");
+		      Lib.assertTrue(r == 1, "expected match number of 1");
 		    }
 	    });
 	    exp1.setName("E1");
@@ -426,7 +421,7 @@ public class GameMatch {
 	    KThread exp2 = new KThread( new Runnable () {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityExpert);
-		      Lib.assertTrue(r == 2, "expected match number of 2");
+		      Lib.assertTrue(r == 1, "expected match number of 1");
 		    }
 	    });
 	    exp2.setName("E2");
@@ -434,7 +429,7 @@ public class GameMatch {
 	    KThread exp3 = new KThread( new Runnable () {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityExpert);
-		      Lib.assertTrue(r == 2, "expected match number of 2");
+		      Lib.assertTrue(r == 1, "expected match number of 1");
 		    }
 	    });
 	    exp3.setName("E3");
@@ -475,7 +470,6 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg1 matched with r = " + r);
-		      // beginners should match with a match number of 1
 		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
@@ -485,7 +479,6 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg2 matched with r = " + r);
-		      // beginners should match with a match number of 1
 		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
@@ -495,7 +488,6 @@ public class GameMatch {
 		    public void run() {
 		      int r = match.play(GameMatch.abilityBeginner);
 		      System.out.println ("beg3 matched");
-		      // beginners should match with a match number of 1
 		      Lib.assertTrue(r == 2, "expected match number of 2");
 		    }
 	    });
@@ -582,8 +574,6 @@ public class GameMatch {
 	    });
 	    exp6.setName("E6");
 
-
-
       // Run the threads.  The beginner threads should successfully
       // form a match, the other threads should not.  The outcome
       // should be the same independent of the order in which threads
@@ -614,10 +604,30 @@ public class GameMatch {
 			exp4.join();
 			exp5.join();
 			exp6.join();
-			
     }
 
+    /**
+     * Test one uncompleted beginner game
+     */
+    public static void matchTest7() {
+	    final GameMatch match = new GameMatch(3);
 
+	    // Instantiate the threads
+	    KThread beg1 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityBeginner);
+		      System.out.println ("beg1 matched with r = " + r);
+		      Lib.assertTrue(r == 2, "expected match number of 2");
+		    }
+	    });
+	    beg1.setName("B1");
+
+      beg1.fork();
+      
+      KThread.currentThread().yield();
+      KThread.currentThread().yield();
+      KThread.currentThread().yield();
+    }
 
     /**
      * Self Tests
@@ -632,16 +642,19 @@ public class GameMatch {
       matchTest2();
 
       System.out.println("---Test 3---");
-    //  matchTest3();
+      matchTest3();
 
       System.out.println("---Test 4---");
-    //  matchTest4();
+      matchTest4();
 
       System.out.println("---Test 5---");
-    //  matchTest5();
+      matchTest5();
 
       System.out.println("---Test 6---");
-	  //  matchTest6();
+	    matchTest6();
+
+      System.out.println("---Test 7---");
+	    matchTest7();
 
       System.out.println("\nGAMEMATCH tests done\n");
     }
