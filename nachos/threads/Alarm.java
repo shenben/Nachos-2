@@ -40,18 +40,18 @@ public class Alarm {
     if( threads.isEmpty() ) return;
     // Iterate through the hashmap to get all the threads that have a wake
 		// time earlier than curren time
+    intStatus = Machine.interrupt().disable();
 		Iterator it = threads.entrySet().iterator();
 		while( it.hasNext() ){
       Map.Entry pair = (Map.Entry) it.next();
 			if( ((long)pair.getKey()) <= Machine.timer().getTime() ) {
-        intStatus = Machine.interrupt().disable();
 				((KThread)pair.getValue()).ready();
-				Machine.interrupt().restore(intStatus);
 
 				it.remove();
 			}
 			else break;
 		}
+	  Machine.interrupt().restore(intStatus);
     
 		KThread.currentThread().yield();
 	}
