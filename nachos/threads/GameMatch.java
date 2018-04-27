@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.LinkedList;
 
 /**
  * A <i>GameMatch</i> groups together player threads of the same
@@ -28,6 +29,10 @@ public class GameMatch {
 
     private static int matchId = 0;
 
+    private LinkedList<KThread> begQ;
+    private LinkedList<KThread> intQ;
+    private LinkedList<KThread> expQ;
+
     /**
      * Allocate a new GameMatch specifying the number of player
      * threads of the same ability required to form a match.  Your
@@ -40,6 +45,10 @@ public class GameMatch {
       condBeginner = new Condition(lock);
 			condInter = new Condition(lock);
 			condExp = new Condition( lock );
+
+      begQ = new LinkedList<KThread>();
+      intQ = new LinkedList<KThread>();
+      expQ = new LinkedList<KThread>();
     }
 
     /**
@@ -174,7 +183,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg1 matched");
-          Lib.assertTrue( r == 1, "expected a match number of 1" );
+          Lib.assertTrue( r == 2, "expected a match number of 2" );
         }
       });
       beg1.setName("B1");
@@ -201,15 +210,20 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg4 matched");
-          Lib.assertTrue( r == 2, "expected a match number of 2" );
+          Lib.assertTrue( r == 1, "expected a match number of 1" );
         }
       });
       beg4.setName("B4");
 
       beg2.fork();
-      beg1.fork();
       beg4.fork();
+      beg1.fork();
       beg3.fork();
+
+      beg2.join();
+      beg4.join();
+      beg1.join();
+      beg3.join();
     }
 
     /**
@@ -222,7 +236,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg1 matched");
-          Lib.assertTrue( r == 1, "expected a match number of 1" );
+          Lib.assertTrue( r == 2, "expected a match number of 2" );
         }
       });
       beg1.setName("B1");
@@ -231,7 +245,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg2 matched");
-          Lib.assertTrue( r == 1, "expected a match number of 1" );
+          Lib.assertTrue( r == 2, "expected a match number of 2" );
         }
       });
       beg2.setName("B2");
@@ -240,7 +254,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityIntermediate);
           System.out.println("int1 matched");
-          Lib.assertTrue( r == 2, "expected a match number of 2" );
+          Lib.assertTrue( r == 1, "expected a match number of 1" );
         }
       });
       int1.setName("I1");
@@ -249,7 +263,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityIntermediate);
           System.out.println("int2 matched");
-          Lib.assertTrue( r == 2, "expected a match number of 2" );
+          Lib.assertTrue( r == 1, "expected a match number of 1" );
         }
       });
       int2.setName("I2");
@@ -258,6 +272,11 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
       int1.fork();
       int2.fork();
       beg1.fork();
+
+      beg2.join();
+      int1.join();
+      int2.join();
+      beg1.join();
     }
 
     /**
@@ -311,6 +330,11 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
       int1.fork();
       exp1.fork();
       beg2.fork();
+
+      beg1.join();
+      int1.join();
+      exp1.join();
+      beg2.join();
 
       // Assume join is not implemented, use yield to allow other
       // threads to run
@@ -417,6 +441,16 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
       int2.fork();
       beg2.fork();
       int3.fork();
+
+      beg1.join();
+      exp1.join();
+      exp2.join();
+      int1.join();
+      exp3.join();
+      beg3.join();
+      int2.join();
+      beg2.join();
+      int3.join();
     }
 
     /**
@@ -580,23 +614,23 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
     public static void selfTest() {
       System.out.println("\nTesting GAMEMATCH\n");
 
-      System.out.println("Testing 1 ability");
+      System.out.println("---Test 1---");
       matchTest1();
 
-      System.out.println("Testing 1 ability multiple matches");
-    //  matchTest2();
+      System.out.println("---Test 2---");
+      matchTest2();
 
-      System.out.println("Testing 2 ability multiple matches");
-     // matchTest3();
+      System.out.println("---Test 3---");
+    //  matchTest3();
 
-      System.out.println("Testing 3 ability 1 match");
+      System.out.println("---Test 4---");
     //  matchTest4();
 
-      System.out.println("Testing 3 ability multiple match");
-     // matchTest5();
+      System.out.println("---Test 5---");
+    //  matchTest5();
 
-			System.out.println( "\nTesting test 6.\n");
-	//		matchTest6();
+      System.out.println("---Test 6---");
+	  //  matchTest6();
 
       System.out.println("\nGAMEMATCH tests done\n");
     }
