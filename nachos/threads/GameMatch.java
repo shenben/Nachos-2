@@ -83,7 +83,8 @@ public class GameMatch {
         this.matchNum = matchId;
         cond.wakeAll();
       } else {
-        KThread.currentThread().sleep();
+        //KThread.currentThread().sleep();
+				cond.sleep();
       }
       lock.release();
 	    return matchNum;
