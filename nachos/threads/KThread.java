@@ -2,6 +2,7 @@ package nachos.threads;
 
 import nachos.machine.*;
 import java.util.*;
+import java.lang.*;
 
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
@@ -152,6 +153,7 @@ public class KThread {
 
 		Lib.debug(dbgThread, "Forking thread: " + toString() + " Runnable: "
 				+ target);
+    System.out.println("Forking thread: " + toString());
 		boolean intStatus = Machine.interrupt().disable();
 
 		tcb.start(new Runnable() {
@@ -209,6 +211,7 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		    && joinThreads.get(currentThread ) != null ) {
 			joinThreads.get( currentThread ).ready(); // Put the thread back on the ready queue
 			joinThreads.remove( currentThread );
+      Lib.assertTrue( !joinThreads.containsKey( currentThread ) );
 		}
 
 		sleep();
@@ -295,17 +298,16 @@ System.out.println( " in finish by thread " + currentThread.toString());
 	//	Lib.assertTrue( this.join_called != true ); // Call join on thread at most once
 
 		if( this.status != statusFinished ){
+		  boolean intStatus = Machine.interrupt().disable(); // Disable interrupts
 		  // Try putting the current thread onto the hashmap
 			Lib.assertTrue( !joinThreads.containsKey( this ) );
 			if( joinThreads.isEmpty() || !joinThreads.containsKey( this ) ) {
         joinThreads.put( this, currentThread );
-		    boolean intStatus = Machine.interrupt().disable(); // Diable interrupts
         currentThread.sleep(); // suspend the current thread
 
 			  //this.ready(); // Put this thread onto the ready list
-		   	Machine.interrupt().restore( intStatus );
-
 			}
+		  Machine.interrupt().restore( intStatus );
 		}
   
 	  return;
@@ -454,6 +456,9 @@ System.out.println( " in finish by thread " + currentThread.toString());
 	//	System.out.println( "\nTest when we join two independent threads." );
 	//	joinTestReverse();
 
+    System.out.println( "\nTest when join() is called twice on same thread." );
+    joinTestDoubleJoin();
+
 		System.out.println("Finish testing join()\n");
 	}
 
@@ -471,12 +476,19 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		  }); // End of new Runnable()
 
 			child1.setName( "child1" ).fork();
+
 			// Busy waiting for the child to finish
 			for( int i = 0 ; i < 5 ; i++ ) {
+        if ((child1.status != statusFinished)) {
+          Lib.assertTrue( (currentThread.status != statusFinished) );
+        }
         System.out.println( "Busy..." );
 				KThread.currentThread().yield();
 			}
 
+      if ((child1.status != statusFinished)) {
+        Lib.assertTrue( (currentThread.status != statusFinished) );
+      }
 			child1.join();
 			System.out.println( "After joining, child1 should be finished." );
 			System.out.println( "is it? " + (child1.status == statusFinished));
@@ -509,6 +521,8 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		}
 
 		System.out.println( "Is child one finished? " + ( child1.status == statusFinished ));
+		Lib.assertTrue( (child1.status == statusFinished ), 
+			                " Expected child1 to be finished." );
 	}
 
 	/**
@@ -575,6 +589,25 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		child1.setName( "child1" ).fork();
 		child2.setName( "child2" ).fork();
 	}
+
+  /**
+   * Test calling join on same thread twice
+   */
+  private static void joinTestDoubleJoin() {
+    KThread child1 = new KThread( new Runnable() {
+      public void run() {
+        try {
+          currentThread.join();
+        } catch (Error e) {
+          System.out.println("Assertion failed correctly: " + e);
+        }
+        System.out.println( "child1 has been called!" );
+      }
+    });
+
+    child1.setName( "child1" ).fork();
+    child1.join();
+  }
 
 	/**
 	 * Error testing
