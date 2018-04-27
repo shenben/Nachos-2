@@ -44,7 +44,7 @@ public class GameMatch {
 
       condBeginner = new Condition(lock);
 			condInter = new Condition(lock);
-			condExp = new Condition( lock );
+			condExp = new Condition(lock);
 
       begQ = new LinkedList<KThread>();
       intQ = new LinkedList<KThread>();
@@ -75,10 +75,16 @@ public class GameMatch {
 				if( numWaitingB == numPlayersNeeded ) {
 				  matchId++;
 					numWaitingB = 0;
-				  this.matchNum = matchId;
+				  KThread.currentThread().setMatchNum(matchId);
 				  condBeginner.wakeAll();
+          for (int i = 0; i < numPlayersNeeded - 1; i++) {
+            begQ.get(i).setMatchNum(KThread.currentThread().getMatchNum());
+          }
 				}
-				else condBeginner.sleep();
+				else {
+          begQ.add(KThread.currentThread());
+          condBeginner.sleep();
+        }
 				lock.release();
 			}
       else if (ability == abilityIntermediate) {
@@ -90,7 +96,10 @@ public class GameMatch {
 					this.matchNum = matchId;
 					condInter.wakeAll();
 				}
-				else condInter.sleep();
+				else {
+          intQ.add(KThread.currentThread());
+          condInter.sleep();
+        }
 				lock.release();
 			}
       else if (ability == abilityExpert) {
@@ -103,7 +112,8 @@ public class GameMatch {
 					condExp.wakeAll();
 				}
 				else {
-System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
+          System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
+          expQ.add(KThread.currentThread());
 				  condExp.sleep();
 				}
 				lock.release();
@@ -137,7 +147,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
 				cond.sleep();
       }
       lock.release();*/
-	    return matchNum;
+	    return KThread.currentThread().getMatchNum();
     }
 
     /************************** TESTS **************************/
@@ -210,6 +220,7 @@ System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
         public void run() {
           int r = match.play(GameMatch.abilityBeginner);
           System.out.println("beg4 matched");
+          System.out.println("r: " + r);
           Lib.assertTrue( r == 1, "expected a match number of 1" );
         }
       });

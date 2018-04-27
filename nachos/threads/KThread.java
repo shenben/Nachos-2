@@ -433,6 +433,14 @@ System.out.println( " in finish by thread " + currentThread.toString());
 		private int which;
 	}
 
+  public int getMatchNum() {
+    return this.matchNum;
+  }
+
+  public void setMatchNum(int num) {
+    this.matchNum = num;
+  }
+
 	/**
 	 * Tests whether this module is working.
 	 */
@@ -667,4 +675,7 @@ System.out.println( " in finish by thread " + currentThread.toString());
 	private static HashMap<KThread, KThread> joinThreads = new HashMap<>();
 
 	private boolean join_called = false;
+
+  /** For GameMatch stuff */
+  private int matchNum = 0;
 }
