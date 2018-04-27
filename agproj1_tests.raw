@@ -163,3 +163,88 @@ nachos.machine.AssertionFailureError: expected match number of 1
 2 errors
 
 
+------[ Thu Apr 26 17:30:03 2018 ]------
+--[ ALARM - Tests waitUntil to ensure it waits at least minimum amount of time ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+AlarmTest1: waited for 1010 ticks
+AlarmTest1: waited for 10120 ticks
+AlarmTest1: waited for 100190 ticks
+
+success
+
+--[ JOIN - Tests join on completed child thread ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+busy...
+I (heart) Nachos!
+ in finish by thread child1 (#2)
+busy...
+busy...
+busy...
+busy...
+After joining, child1 should be finished.
+is it? true
+
+success
+
+--[ CV2 (1) - Strict interlock test. Ping and pong threads alternate. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: ping (#2)
+Forking thread: pong (#3)
+ping
+ping
+ping
+ping
+ping
+ping
+ping
+ping
+ping
+ping
+ in finish by thread ping (#2)
+pong
+pong
+pong
+pong
+pong
+pong
+pong
+pong
+pong
+pong
+ in finish by thread pong (#3)
+
+success
+
+--[ CV2 (2) - Producer creates list [1,2,3,4,5], consumer pops first element until list is empty. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: Consumer (#2)
+Forking thread: Producer (#3)
+./nachos_executable: line 14:  1726 Killed                  java nachos.machine.Machine $*
+
+--[ GAMEMATCH - Create 1 beginner match, incomplete intermediate match, incomplete expert match. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: B1 (#2)
+Forking thread: I1 (#4)
+Forking thread: E1 (#5)
+Forking thread: B2 (#3)
+
+nachos.machine.AssertionFailureError
+	at nachos.machine.Lib.assertTrue(Lib.java:77)
+	at nachos.threads.KThread.sleep(KThread.java:264)
+	at nachos.threads.GameMatch.play(GameMatch.java:86)
+	at nachos.ag.UCSDProj1Provided$4.run(UCSDProj1Provided.java:175)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+
