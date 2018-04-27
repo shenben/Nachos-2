@@ -17,7 +17,9 @@ public class GameMatch {
     
     private int numPlayersNeeded = 0;
     private Lock lock;
-    private Condition cond;
+    private Condition condBeginner;
+		private Condition condInter;
+		private Condition condExp;
     private int numWaitingB = 0;
     private int numWaitingI = 0;
     private int numWaitingE = 0;
@@ -34,7 +36,10 @@ public class GameMatch {
     public GameMatch (int numPlayersInMatch) {
       numPlayersNeeded = numPlayersInMatch;
       lock = new Lock();
-      cond = new Condition(lock);
+
+      condBeginner = new Condition(lock);
+			condInter = new Condition(lock);
+			condExp = new Condition( lock );
     }
 
     /**
@@ -54,10 +59,46 @@ public class GameMatch {
      * or abilityExpert; return -1 otherwise.
      */
     public int play (int ability) {
-      lock.acquire();
-      if (ability == abilityBeginner) numWaitingB++;
-      else if (ability == abilityIntermediate) numWaitingI++;
-      else if (ability == abilityExpert) numWaitingE++;
+     // lock.acquire();
+      if (ability == abilityBeginner) {
+			  lock.acquire();
+			  numWaitingB++;
+				if( numWaitingB == numPlayersNeeded ) {
+				  matchId++;
+					numWaitingB = 0;
+				  this.matchNum = matchId;
+				  condBeginner.wakeAll();
+				}
+				else condBeginner.sleep();
+				lock.release();
+			}
+      else if (ability == abilityIntermediate) {
+			  lock.acquire();
+			  numWaitingI++;
+				if( numWaitingI == numPlayersNeeded ) {
+          numWaitingI = 0;
+					matchId++;
+					this.matchNum = matchId;
+					condInter.wakeAll();
+				}
+				else condInter.sleep();
+				lock.release();
+			}
+      else if (ability == abilityExpert) {
+			  lock.acquire();
+			  numWaitingE++;
+				if( numWaitingE == numPlayersNeeded ) {
+          numWaitingE = 0;
+					matchId++;
+					this.matchNum = matchId;
+					condExp.wakeAll();
+				}
+				else {
+System.out.println( "sleeping thread: " + KThread.currentThread().toString() );
+				  condExp.sleep();
+				}
+				lock.release();
+			}
       else return -1;
       //numWaiting++;
       /*if (numWaiting < numPlayersNeeded) KThread.currentThread().sleep();
@@ -67,11 +108,11 @@ public class GameMatch {
         this.matchNum = matchId;
         cond.wakeAll();
       }*/
-      if (numWaitingB == numPlayersNeeded) {
+     /* if (numWaitingB == numPlayersNeeded) {
         numWaitingB = 0;
         matchId++;
         this.matchNum = matchId;
-        cond.wakeAll();
+        condBeginner.wakeAll();
       } else if (numWaitingI == numPlayersNeeded) {
         numWaitingI = 0;
         matchId++;
@@ -86,7 +127,7 @@ public class GameMatch {
         //KThread.currentThread().sleep();
 				cond.sleep();
       }
-      lock.release();
+      lock.release();*/
 	    return matchNum;
     }
 
@@ -118,6 +159,9 @@ public class GameMatch {
       
       beg1.fork();
       beg2.fork();
+
+			beg1.join();
+			beg2.join();
     }
 
     /** 
@@ -376,6 +420,161 @@ public class GameMatch {
     }
 
     /**
+     * Test all levels multiple matches in different orders
+     */
+    public static void matchTest6 () {
+	    final GameMatch match = new GameMatch(3);
+
+	    // Instantiate the threads
+	    KThread beg1 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityBeginner);
+		      System.out.println ("beg1 matched with r = " + r);
+		      // beginners should match with a match number of 1
+		      Lib.assertTrue(r == 2, "expected match number of 2");
+		    }
+	    });
+	    beg1.setName("B1");
+
+	    KThread beg2 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityBeginner);
+		      System.out.println ("beg2 matched with r = " + r);
+		      // beginners should match with a match number of 1
+		      Lib.assertTrue(r == 2, "expected match number of 2");
+		    }
+	    });
+	    beg2.setName("B2");
+
+	    KThread beg3 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityBeginner);
+		      System.out.println ("beg3 matched");
+		      // beginners should match with a match number of 1
+		      Lib.assertTrue(r == 2, "expected match number of 2");
+		    }
+	    });
+	    beg3.setName("B3");
+
+	    KThread int1 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityIntermediate);
+          System.out.println ("int 1st  matched");
+
+		      Lib.assertTrue(r == 3, "expected match number of 3");
+		    }
+	    });
+	    int1.setName("I1");
+
+	    KThread int2 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityIntermediate);
+  System.out.println ("int 2 matched");
+
+		      Lib.assertTrue(r == 3, "expected match number of 3");
+		    }
+	    });
+	    int2.setName("I2");
+
+	    KThread int3 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityIntermediate);
+	 System.out.println ("int 3 matched");
+
+		      Lib.assertTrue(r == 3, "expected match number of 3");
+		    }
+	    });
+	    int3.setName("I3");
+
+	    KThread exp1 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+					System.out.println( "exp1 match with r = "+ r);
+		      Lib.assertTrue(r == 1, "expected match number of 1");
+		    }
+	    });
+	    exp1.setName("E1");
+
+	    KThread exp2 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+					System.out.println( "exp2 matched with r = " + r);
+		      Lib.assertTrue(r == 1, "expected match number of 1");
+		    }
+	    });
+	    exp2.setName("E2");
+
+	    KThread exp3 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+					System.out.println( "exp3 matched with r = " + r);
+		      Lib.assertTrue(r == 1, "expected match number of 1");
+		    }
+	    });
+	    exp3.setName("E3");
+
+      KThread exp4 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+		      Lib.assertTrue(r == 4, "expected match number of 4");
+		    }
+	    });
+	    exp4.setName("E4");
+
+			KThread exp5 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+		      Lib.assertTrue(r == 4, "expected match number of 4");
+		    }
+	    });
+	    exp5.setName("E5");
+
+      KThread exp6 = new KThread( new Runnable () {
+		    public void run() {
+		      int r = match.play(GameMatch.abilityExpert);
+		      Lib.assertTrue(r == 4, "expected match number of 4");
+		    }
+	    });
+	    exp6.setName("E6");
+
+
+
+      // Run the threads.  The beginner threads should successfully
+      // form a match, the other threads should not.  The outcome
+      // should be the same independent of the order in which threads
+      // are forked.
+      beg1.fork();
+      exp1.fork();
+      exp2.fork();
+      int1.fork();
+      exp3.fork();
+      beg3.fork();
+      int2.fork();
+      beg2.fork();
+      int3.fork();
+
+			exp4.fork();
+			exp5.fork();
+			exp6.fork();
+
+			beg1.join();
+			beg2.join();
+			beg3.join();
+			int1.join();
+			int2.join();
+			int3.join();
+			exp1.join();
+			exp2.join();
+			exp3.join();
+			exp4.join();
+			exp5.join();
+			exp6.join();
+			
+    }
+
+
+
+    /**
      * Self Tests
      */
     public static void selfTest() {
@@ -385,16 +584,19 @@ public class GameMatch {
       matchTest1();
 
       System.out.println("Testing 1 ability multiple matches");
-      matchTest2();
+    //  matchTest2();
 
       System.out.println("Testing 2 ability multiple matches");
-      matchTest3();
+     // matchTest3();
 
       System.out.println("Testing 3 ability 1 match");
-      matchTest4();
+    //  matchTest4();
 
       System.out.println("Testing 3 ability multiple match");
-      matchTest5();
+     // matchTest5();
+
+			System.out.println( "\nTesting test 6.\n");
+	//		matchTest6();
 
       System.out.println("\nGAMEMATCH tests done\n");
     }

@@ -253,8 +253,8 @@ public class Condition2 {
 
 						KThread.currentThread().yield();
 					}
-				//	empty.wakeAll();
-				  empty.wake();
+					empty.wakeAll();
+				 // empty.wake();
 					lock.release();
 				}
 		  });
