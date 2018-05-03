@@ -1,0 +1,838 @@
+------[ Sat Apr 28 18:41:50 2018 ]------
+--[ CV2 - Test if sleep has acquired the lock ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.sleepWithoutLockTest
+
+success
+
+--[ CV2 - Test if wake has acquired the lock ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeWithoutLockTest
+
+success
+
+--[ CV2 - Test if wakeAll has acquired the lock ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeAllWithoutLockTest
+
+success
+
+--[ CV2 - Test if sleep() sleeps until someone wakes it up ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.sleepTest
+Forking thread: jfork (#2)
+
+success
+
+--[ CV2 - Test if wake() wakes exactly one sleeping thread ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeTest
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+ in finish by thread child3 (#4)
+
+success
+
+--[ CV2 - Test if wakeAll() wakes all the sleeping threads ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeAllTest
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+ in finish by thread child3 (#4)
+ in finish by thread child2 (#3)
+ in finish by thread child1 (#2)
+Wakeups: 3
+
+success
+
+--[ CV2 - Test if wake has no effect when there is no thread sleeping ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeNoEffectTest
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+
+success
+
+--[ CV2 - Test if wakeAll has no effect when there is no thread sleeping ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Enter UCSDCondition2Grader.wakeAllNoEffectTest
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+
+success
+
+--[ JOIN - Test join() after child had finished. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+busy...
+I (heart) Nachos!
+ in finish by thread child1 (#2)
+busy...
+busy...
+busy...
+busy...
+
+success
+
+--[ JOIN - Test join() before child finishes ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+I (heart) Nachos!
+I (heart) Nachos!
+I (heart) Nachos!
+I (heart) Nachos!
+I (heart) Nachos!
+ in finish by thread child1 (#2)
+
+success
+
+--[ JOIN - Test join() on different childs right after spawn, one by one ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+ in finish by thread jfork (#2)
+Forking thread: jfork (#3)
+ in finish by thread jfork (#3)
+Forking thread: jfork (#4)
+ in finish by thread jfork (#4)
+Forking thread: jfork (#5)
+ in finish by thread jfork (#5)
+Forking thread: jfork (#6)
+ in finish by thread jfork (#6)
+Forking thread: jfork (#7)
+ in finish by thread jfork (#7)
+Forking thread: jfork (#8)
+ in finish by thread jfork (#8)
+Forking thread: jfork (#9)
+ in finish by thread jfork (#9)
+Forking thread: jfork (#10)
+ in finish by thread jfork (#10)
+Forking thread: jfork (#11)
+ in finish by thread jfork (#11)
+
+success
+
+--[ JOIN - Test join() on different childs; all children are spawned first, then joined one by one. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+Forking thread: jfork (#5)
+Forking thread: jfork (#6)
+Forking thread: jfork (#7)
+Forking thread: jfork (#8)
+Forking thread: jfork (#9)
+Forking thread: jfork (#10)
+Forking thread: jfork (#11)
+ in finish by thread jfork (#2)
+ in finish by thread jfork (#3)
+ in finish by thread jfork (#4)
+ in finish by thread jfork (#5)
+ in finish by thread jfork (#6)
+ in finish by thread jfork (#7)
+ in finish by thread jfork (#8)
+ in finish by thread jfork (#9)
+ in finish by thread jfork (#10)
+ in finish by thread jfork (#11)
+
+success
+
+--[ JOIN - Test differnt threads join different other threads. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+Forking thread: jfork (#5)
+Forking thread: jfork (#6)
+Forking thread: jfork (#7)
+ in finish by thread jfork (#5)
+ in finish by thread jfork (#6)
+ in finish by thread jfork (#7)
+ in finish by thread jfork (#2)
+ in finish by thread jfork (#3)
+ in finish by thread jfork (#4)
+
+success
+
+--[ JOIN - Test joining same thread multiple times should be an error. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+ in finish by thread jfork (#2)
+
+nachos.machine.AssertionFailureError: parent was able to join to child twice
+	at nachos.machine.Lib.assertTrue(Lib.java:89)
+	at nachos.ag.UCSDJoinGrader.error1(UCSDJoinGrader.java:135)
+	at nachos.ag.UCSDJoinGrader.run(UCSDJoinGrader.java:166)
+	at nachos.ag.AutoGrader.start(AutoGrader.java:47)
+	at nachos.machine.Machine$1.run(Machine.java:62)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.start(TCB.java:129)
+	at nachos.machine.Machine.main(Machine.java:60)
+
+--[ JOIN - Test joining oneself should be an error. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Exception caught: null
+
+success
+
+--[ ALARM - Tests waitUntil to ensure it waits at least minimum amount of time ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+Forking thread: jfork (#5)
+ in finish by thread jfork (#3)
+ in finish by thread jfork (#5)
+ in finish by thread jfork (#2)
+ in finish by thread jfork (#4)
+
+success
+
+--[ ALARM - Tests whether waitUntil actually wakes up at correct time ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+Forking thread: jfork (#5)
+
+nachos.machine.AssertionFailureError: thread did not wake up on time
+	at nachos.machine.Lib.assertTrue(Lib.java:89)
+	at nachos.ag.ThreadGrader4.timerInterrupt(ThreadGrader4.java:42)
+	at nachos.machine.Timer$2.run(Timer.java:36)
+	at nachos.machine.Interrupt.checkIfDue(Interrupt.java:182)
+	at nachos.machine.Interrupt.tick(Interrupt.java:150)
+	at nachos.machine.Interrupt.setStatus(Interrupt.java:99)
+	at nachos.machine.Interrupt.restore(Interrupt.java:83)
+	at nachos.threads.KThread.yield(KThread.java:247)
+	at nachos.threads.KThread$2.run(KThread.java:331)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+--[ ALARM - Test if waking up threads in proper order - not necessarily sleep order ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: (unnamed thread) (#2)
+Forking thread: (unnamed thread) (#3)
+Forking thread: (unnamed thread) (#4)
+Forking thread: (unnamed thread) (#5)
+Forking thread: (unnamed thread) (#6)
+
+nachos.machine.AssertionFailureError
+	at nachos.machine.Lib.assertTrue(Lib.java:77)
+	at nachos.ag.UCSDAlarmGrader$ProperOrder.run(UCSDAlarmGrader.java:26)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+--[ ALARM - Test if thds are waken up at proper time ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+
+success
+
+--[ ALARM - Tests proper handling of negative wait times. ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+
+success
+
+--[ ALARM - Tests if mistakenly waking all the threads ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: (unnamed thread) (#2)
+Forking thread: (unnamed thread) (#3)
+Forking thread: (unnamed thread) (#4)
+Forking thread: (unnamed thread) (#5)
+Forking thread: (unnamed thread) (#6)
+Forking thread: (unnamed thread) (#7)
+Forking thread: (unnamed thread) (#8)
+ in finish by thread (unnamed thread) (#6)
+
+nachos.machine.AssertionFailureError: thread did not wake up on correct interrupt
+	at nachos.machine.Lib.assertTrue(Lib.java:89)
+	at nachos.ag.UCSDAlarmGrader$SameInterrupt.run(UCSDAlarmGrader.java:99)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+--[ GAME - Test matching each ability in series ]--
+nachos 5.0j initializing... config interrupt timer user-check grader
+Forking thread: idle (#1)
+Forking thread: B1 (#2)
+Forking thread: B2 (#3)
+beg2 matched
+ in finish by thread B2 (#3)
+beg1 matched
+ in finish by thread B1 (#2)
+Forking thread: I1 (#4)
+Forking thread: I2 (#5)
+int2 matched
+ in finish by thread I2 (#5)
+int1 matched
+ in finish by thread I1 (#4)
+Forking thread: E1 (#6)
+Forking thread: E2 (#7)
+exp2 matched
+ in finish by thread E2 (#7)
+exp1 matched
+ in finish by thread E1 (#6)
+parent finishing
+
+success
+
+--[ GAME - Test matching with two instances of GameMatch ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: beg1 (#2)
+Forking thread: beg1 (#3)
+Forking thread: beg2 (#4)
+Forking thread: beg2 (#5)
+Forking thread: beg3 (#6)
+Forking thread: beg3 (#7)
+beg1 entering match
+beg1 entering match
+beg2 entering match
+beg2 entering match
+beg3 entering match
+beg3 matched
+Thread beg3 returning with match number 1
+ in finish by thread beg3 (#6)
+beg3 entering match
+beg3 matched
+Thread beg3 returning with match number 2
+
+nachos.machine.AssertionFailureError: expected match number equal to 1
+	at nachos.machine.Lib.assertTrue(Lib.java:89)
+	at nachos.ag.UCSDGameMatchGrader$7.run(UCSDGameMatchGrader.java:109)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+--[ GAME - Test matching one ability many times ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: B0 (#2)
+Forking thread: B1 (#3)
+Forking thread: B2 (#4)
+Forking thread: B3 (#5)
+Forking thread: B4 (#6)
+Forking thread: B5 (#7)
+Forking thread: B6 (#8)
+Forking thread: B7 (#9)
+Forking thread: B8 (#10)
+Forking thread: B9 (#11)
+B1 matched
+ in finish by thread B1 (#3)
+B3 matched
+ in finish by thread B3 (#5)
+B5 matched
+ in finish by thread B5 (#7)
+B7 matched
+ in finish by thread B7 (#9)
+B9 matched
+ in finish by thread B9 (#11)
+B0 matched
+ in finish by thread B0 (#2)
+B2 matched
+ in finish by thread B2 (#4)
+B4 matched
+ in finish by thread B4 (#6)
+B6 matched
+ in finish by thread B6 (#8)
+B8 matched
+ in finish by thread B8 (#10)
+parent finishing
+
+success
+
+--[ GAME - Test matching with threads of many abilities ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: B1 (#2)
+Forking thread: I1 (#4)
+Forking thread: E1 (#5)
+Forking thread: B2 (#3)
+beg2 matched
+ in finish by thread B2 (#3)
+beg1 matched
+ in finish by thread B1 (#2)
+parent finishing
+
+success
+
+--[ GAME - Test handling correct match number when threads are interleaved across abilities ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: B1 (#2)
+Forking thread: I1 (#4)
+Forking thread: E1 (#6)
+Forking thread: B2 (#3)
+Forking thread: I2 (#5)
+Forking thread: E2 (#7)
+beg2 matched
+ in finish by thread B2 (#3)
+int2 matched
+ in finish by thread I2 (#5)
+exp2 matched
+ in finish by thread E2 (#7)
+beg1 matched
+ in finish by thread B1 (#2)
+int1 matched
+ in finish by thread I1 (#4)
+exp1 matched
+ in finish by thread E1 (#6)
+parent finishing
+
+success
+
+--[ GAME - Test many matches with many threads concurrently running ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Forking thread: jfork (#2)
+Forking thread: jfork (#3)
+Forking thread: jfork (#4)
+Forking thread: jfork (#5)
+Forking thread: jfork (#6)
+Forking thread: jfork (#7)
+Forking thread: jfork (#8)
+Forking thread: jfork (#9)
+Forking thread: jfork (#10)
+Forking thread: jfork (#11)
+Forking thread: jfork (#12)
+Forking thread: jfork (#13)
+Forking thread: jfork (#14)
+Forking thread: jfork (#15)
+Forking thread: jfork (#16)
+Forking thread: jfork (#17)
+Forking thread: jfork (#18)
+Forking thread: jfork (#19)
+Forking thread: jfork (#20)
+Forking thread: jfork (#21)
+Forking thread: jfork (#22)
+Forking thread: jfork (#23)
+Forking thread: jfork (#24)
+Forking thread: jfork (#25)
+Forking thread: jfork (#26)
+Forking thread: jfork (#27)
+Forking thread: jfork (#28)
+Forking thread: jfork (#29)
+Forking thread: jfork (#30)
+Forking thread: jfork (#31)
+Forking thread: jfork (#32)
+Forking thread: jfork (#33)
+Forking thread: jfork (#34)
+Forking thread: jfork (#35)
+Forking thread: jfork (#36)
+Forking thread: jfork (#37)
+Forking thread: jfork (#38)
+Forking thread: jfork (#39)
+Forking thread: jfork (#40)
+Forking thread: jfork (#41)
+Forking thread: jfork (#42)
+Forking thread: jfork (#43)
+Forking thread: jfork (#44)
+Forking thread: jfork (#45)
+Forking thread: jfork (#46)
+Forking thread: jfork (#47)
+Forking thread: jfork (#48)
+Forking thread: jfork (#49)
+Forking thread: jfork (#50)
+Forking thread: jfork (#51)
+Forking thread: jfork (#52)
+Forking thread: jfork (#53)
+Forking thread: jfork (#54)
+Forking thread: jfork (#55)
+Forking thread: jfork (#56)
+Forking thread: jfork (#57)
+Forking thread: jfork (#58)
+Forking thread: jfork (#59)
+Forking thread: jfork (#60)
+Forking thread: jfork (#61)
+Forking thread: jfork (#62)
+Forking thread: jfork (#63)
+Forking thread: jfork (#64)
+Forking thread: jfork (#65)
+Forking thread: jfork (#66)
+Forking thread: jfork (#67)
+Forking thread: jfork (#68)
+Forking thread: jfork (#69)
+Forking thread: jfork (#70)
+Forking thread: jfork (#71)
+Forking thread: jfork (#72)
+Forking thread: jfork (#73)
+Forking thread: jfork (#74)
+Forking thread: jfork (#75)
+Forking thread: jfork (#76)
+Forking thread: jfork (#77)
+Forking thread: jfork (#78)
+Forking thread: jfork (#79)
+Forking thread: jfork (#80)
+Forking thread: jfork (#81)
+Forking thread: jfork (#82)
+Forking thread: jfork (#83)
+Forking thread: jfork (#84)
+Forking thread: jfork (#85)
+Forking thread: jfork (#86)
+Forking thread: jfork (#87)
+Forking thread: jfork (#88)
+Forking thread: jfork (#89)
+Forking thread: jfork (#90)
+Forking thread: jfork (#91)
+Forking thread: jfork (#92)
+Forking thread: jfork (#93)
+Forking thread: jfork (#94)
+Forking thread: jfork (#95)
+Forking thread: jfork (#96)
+Forking thread: jfork (#97)
+Forking thread: jfork (#98)
+Forking thread: jfork (#99)
+Forking thread: jfork (#100)
+Forking thread: jfork (#101)
+Forking thread: jfork (#102)
+Forking thread: jfork (#103)
+Forking thread: jfork (#104)
+Forking thread: jfork (#105)
+Forking thread: jfork (#106)
+Forking thread: jfork (#107)
+Forking thread: jfork (#108)
+Forking thread: jfork (#109)
+Forking thread: jfork (#110)
+Forking thread: jfork (#111)
+Forking thread: jfork (#112)
+Forking thread: jfork (#113)
+Forking thread: jfork (#114)
+Forking thread: jfork (#115)
+Forking thread: jfork (#116)
+Forking thread: jfork (#117)
+Forking thread: jfork (#118)
+Forking thread: jfork (#119)
+Forking thread: jfork (#120)
+Forking thread: jfork (#121)
+Forking thread: jfork (#122)
+Forking thread: jfork (#123)
+Forking thread: jfork (#124)
+Forking thread: jfork (#125)
+Forking thread: jfork (#126)
+Forking thread: jfork (#127)
+Forking thread: jfork (#128)
+Forking thread: jfork (#129)
+Forking thread: jfork (#130)
+Forking thread: jfork (#131)
+Forking thread: jfork (#132)
+Forking thread: jfork (#133)
+Forking thread: jfork (#134)
+Forking thread: jfork (#135)
+Forking thread: jfork (#136)
+Forking thread: jfork (#137)
+Forking thread: jfork (#138)
+Forking thread: jfork (#139)
+Forking thread: jfork (#140)
+Forking thread: jfork (#141)
+Forking thread: jfork (#142)
+Forking thread: jfork (#143)
+Forking thread: jfork (#144)
+Forking thread: jfork (#145)
+Forking thread: jfork (#146)
+Forking thread: jfork (#147)
+Forking thread: jfork (#148)
+Forking thread: jfork (#149)
+Forking thread: jfork (#150)
+Forking thread: jfork (#151)
+Forking thread: jfork (#152)
+Forking thread: jfork (#153)
+Forking thread: jfork (#154)
+Forking thread: jfork (#155)
+Forking thread: jfork (#156)
+Forking thread: jfork (#157)
+Forking thread: jfork (#158)
+Forking thread: jfork (#159)
+Forking thread: jfork (#160)
+Forking thread: jfork (#161)
+Forking thread: jfork (#162)
+Forking thread: jfork (#163)
+Forking thread: jfork (#164)
+Forking thread: jfork (#165)
+Forking thread: jfork (#166)
+Forking thread: jfork (#167)
+Forking thread: jfork (#168)
+Forking thread: jfork (#169)
+Forking thread: jfork (#170)
+Forking thread: jfork (#171)
+Forking thread: jfork (#172)
+Forking thread: jfork (#173)
+Forking thread: jfork (#174)
+Forking thread: jfork (#175)
+Forking thread: jfork (#176)
+Forking thread: jfork (#177)
+Forking thread: jfork (#178)
+Forking thread: jfork (#179)
+Forking thread: jfork (#180)
+Forking thread: jfork (#181)
+Forking thread: jfork (#182)
+Forking thread: jfork (#183)
+Forking thread: jfork (#184)
+Forking thread: jfork (#185)
+Forking thread: jfork (#186)
+Forking thread: jfork (#187)
+Forking thread: jfork (#188)
+Forking thread: jfork (#189)
+Forking thread: jfork (#190)
+Forking thread: jfork (#191)
+Forking thread: jfork (#192)
+Forking thread: jfork (#193)
+Forking thread: jfork (#194)
+Forking thread: jfork (#195)
+Forking thread: jfork (#196)
+Forking thread: jfork (#197)
+Forking thread: jfork (#198)
+Forking thread: jfork (#199)
+Forking thread: jfork (#200)
+Forking thread: jfork (#201)
+ in finish by thread T18.3 (#77)
+ in finish by thread T29.3 (#121)
+ in finish by thread T3.3 (#17)
+ in finish by thread T9.1 (#39)
+ in finish by thread T41.0 (#166)
+ in finish by thread T49.0 (#198)
+ in finish by thread T0.0 (#2)
+ in finish by thread T12.0 (#50)
+ in finish by thread T42.3 (#173)
+ in finish by thread T46.1 (#187)
+ in finish by thread T1.2 (#8)
+ in finish by thread T5.0 (#22)
+ in finish by thread T24.1 (#99)
+ in finish by thread T20.3 (#85)
+ in finish by thread T36.3 (#149)
+ in finish by thread T45.2 (#184)
+ in finish by thread T43.1 (#175)
+ in finish by thread T2.0 (#10)
+ in finish by thread T26.1 (#107)
+ in finish by thread T2.1 (#11)
+ in finish by thread T7.1 (#31)
+ in finish by thread T28.2 (#116)
+ in finish by thread T22.3 (#93)
+ in finish by thread T24.3 (#101)
+ in finish by thread T19.2 (#80)
+ in finish by thread T35.0 (#142)
+ in finish by thread T49.2 (#200)
+ in finish by thread T2.2 (#12)
+ in finish by thread T4.1 (#19)
+ in finish by thread T5.3 (#25)
+ in finish by thread T2.3 (#13)
+ in finish by thread T7.2 (#32)
+ in finish by thread T14.3 (#61)
+ in finish by thread T15.3 (#65)
+ in finish by thread T18.0 (#74)
+ in finish by thread T8.0 (#34)
+ in finish by thread T12.2 (#52)
+ in finish by thread T32.1 (#131)
+ in finish by thread T41.1 (#167)
+ in finish by thread T46.3 (#189)
+ in finish by thread T44.0 (#178)
+ in finish by thread T43.0 (#174)
+ in finish by thread T43.3 (#177)
+ in finish by thread T34.0 (#138)
+ in finish by thread T5.2 (#24)
+ in finish by thread T6.2 (#28)
+ in finish by thread T3.0 (#14)
+ in finish by thread T29.0 (#118)
+ in finish by thread T8.2 (#36)
+ in finish by thread T6.0 (#26)
+ in finish by thread T17.0 (#70)
+ in finish by thread T39.0 (#158)
+ in finish by thread T21.3 (#89)
+ in finish by thread T22.0 (#90)
+ in finish by thread T3.1 (#15)
+ in finish by thread T13.0 (#54)
+ in finish by thread T24.2 (#100)
+ in finish by thread T28.1 (#115)
+ in finish by thread T27.2 (#112)
+ in finish by thread T18.1 (#75)
+ in finish by thread T35.2 (#144)
+ in finish by thread T13.1 (#55)
+ in finish by thread T16.2 (#68)
+ in finish by thread T23.3 (#97)
+ in finish by thread T22.1 (#91)
+ in finish by thread T37.1 (#151)
+ in finish by thread T20.0 (#82)
+ in finish by thread T37.2 (#152)
+ in finish by thread T38.0 (#154)
+ in finish by thread T28.3 (#117)
+ in finish by thread T39.3 (#161)
+ in finish by thread T45.3 (#185)
+ in finish by thread T48.2 (#196)
+ in finish by thread T37.3 (#153)
+ in finish by thread T8.3 (#37)
+ in finish by thread T32.3 (#133)
+ in finish by thread T13.2 (#56)
+ in finish by thread T10.0 (#42)
+ in finish by thread T19.0 (#78)
+ in finish by thread T19.1 (#79)
+ in finish by thread T15.2 (#64)
+ in finish by thread T20.2 (#84)
+ in finish by thread T21.1 (#87)
+ in finish by thread T21.2 (#88)
+ in finish by thread T29.2 (#120)
+ in finish by thread T23.2 (#96)
+ in finish by thread T35.3 (#145)
+ in finish by thread T31.0 (#126)
+ in finish by thread T31.1 (#127)
+ in finish by thread T30.1 (#123)
+ in finish by thread T31.3 (#129)
+ in finish by thread T40.1 (#163)
+ in finish by thread T44.1 (#179)
+ in finish by thread T42.2 (#172)
+ in finish by thread T36.0 (#146)
+ in finish by thread T1.0 (#6)
+ in finish by thread T7.3 (#33)
+ in finish by thread T12.1 (#51)
+ in finish by thread T9.2 (#40)
+ in finish by thread T47.2 (#192)
+ in finish by thread T4.3 (#21)
+ in finish by thread T15.0 (#62)
+ in finish by thread T32.2 (#132)
+ in finish by thread T21.0 (#86)
+ in finish by thread T9.3 (#41)
+ in finish by thread T3.2 (#16)
+ in finish by thread T25.1 (#103)
+ in finish by thread T12.3 (#53)
+ in finish by thread T24.0 (#98)
+ in finish by thread T27.3 (#113)
+ in finish by thread T29.1 (#119)
+ in finish by thread T8.1 (#35)
+ in finish by thread T25.2 (#104)
+ in finish by thread T33.3 (#137)
+ in finish by thread T40.0 (#162)
+ in finish by thread T35.1 (#143)
+ in finish by thread T23.0 (#94)
+ in finish by thread T44.2 (#180)
+ in finish by thread T46.0 (#186)
+ in finish by thread T46.2 (#188)
+ in finish by thread T34.1 (#139)
+ in finish by thread T42.0 (#170)
+ in finish by thread T41.3 (#169)
+ in finish by thread T48.0 (#194)
+ in finish by thread T4.2 (#20)
+ in finish by thread T5.1 (#23)
+ in finish by thread T39.2 (#160)
+ in finish by thread T25.0 (#102)
+ in finish by thread T49.1 (#199)
+ in finish by thread T26.3 (#109)
+ in finish by thread T36.2 (#148)
+ in finish by thread T32.0 (#130)
+ in finish by thread T45.0 (#182)
+ in finish by thread T42.1 (#171)
+ in finish by thread T23.1 (#95)
+ in finish by thread T41.2 (#168)
+ in finish by thread T1.3 (#9)
+ in finish by thread T6.1 (#27)
+ in finish by thread T36.1 (#147)
+ in finish by thread T1.1 (#7)
+ in finish by thread T7.0 (#30)
+ in finish by thread T14.2 (#60)
+ in finish by thread T47.0 (#190)
+ in finish by thread T16.3 (#69)
+ in finish by thread T18.2 (#76)
+ in finish by thread T33.0 (#134)
+ in finish by thread T10.1 (#43)
+ in finish by thread T30.3 (#125)
+ in finish by thread T19.3 (#81)
+ in finish by thread T30.0 (#122)
+ in finish by thread T27.1 (#111)
+ in finish by thread T43.2 (#176)
+ in finish by thread T38.1 (#155)
+ in finish by thread T38.2 (#156)
+ in finish by thread T10.3 (#45)
+ in finish by thread T14.1 (#59)
+ in finish by thread T16.0 (#66)
+ in finish by thread T17.1 (#71)
+ in finish by thread T20.1 (#83)
+ in finish by thread T17.3 (#73)
+ in finish by thread T33.1 (#135)
+ in finish by thread T30.2 (#124)
+ in finish by thread T45.1 (#183)
+ in finish by thread T49.3 (#201)
+ in finish by thread T0.1 (#3)
+ in finish by thread T38.3 (#157)
+ in finish by thread T48.1 (#195)
+ in finish by thread T0.3 (#5)
+ in finish by thread T34.3 (#141)
+ in finish by thread T11.1 (#47)
+ in finish by thread T10.2 (#44)
+ in finish by thread T13.3 (#57)
+ in finish by thread T16.1 (#67)
+ in finish by thread T4.0 (#18)
+ in finish by thread T17.2 (#72)
+ in finish by thread T28.0 (#114)
+ in finish by thread T15.1 (#63)
+ in finish by thread T11.3 (#49)
+ in finish by thread T22.2 (#92)
+ in finish by thread T31.2 (#128)
+ in finish by thread T40.3 (#165)
+ in finish by thread T44.3 (#181)
+ in finish by thread T25.3 (#105)
+ in finish by thread T26.2 (#108)
+ in finish by thread T0.2 (#4)
+ in finish by thread T37.0 (#150)
+ in finish by thread T6.3 (#29)
+ in finish by thread T11.0 (#46)
+ in finish by thread T47.1 (#191)
+ in finish by thread T47.3 (#193)
+ in finish by thread T14.0 (#58)
+ in finish by thread T33.2 (#136)
+ in finish by thread T39.1 (#159)
+ in finish by thread T34.2 (#140)
+ in finish by thread T26.0 (#106)
+ in finish by thread T40.2 (#164)
+ in finish by thread T11.2 (#48)
+ in finish by thread T9.0 (#38)
+ in finish by thread T27.0 (#110)
+ in finish by thread T48.3 (#197)
+parent finishing
+
+success
+
+--[ GAME - Test bad ability value ]--
+nachos 5.0j initializing... config interrupt timer elevators user-check grader
+Forking thread: idle (#1)
+Unknown test number 7
+
+success
+
