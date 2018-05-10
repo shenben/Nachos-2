@@ -382,6 +382,7 @@ public class UserProcess {
    */
   private int handleCreate() { //args: String name
     OpenFile of = ThreadedKernel.fileSystem.open("../newfile.c", true);
+    //FIXME not created...
     
     // Check for null
     if ( of == null )
@@ -393,11 +394,40 @@ public class UserProcess {
     }
 
     // Scan for empty entry
-    for (int i = 0; i < maxOpenFiles; i++) {
+    for ( int i = 0; i < maxOpenFiles; i++ ) {
       if ( fileTable[i] == null ) {
         fileTable[i] = of;
-        System.out.println("File mapped to index " + i);
         fileCount++;
+        System.out.println("File mapped to index " + i);
+        return i;
+      }
+    }
+
+    Lib.assertNotReached("fileCount does not accurately describe table!");
+    return 0;
+  }
+
+  /**
+   * Handle the open() system call.
+   */
+  private int handleOpen() { //args: String name
+    OpenFile of = ThreadedKernel.fileSystem.open("../oldfile.c", true);
+
+    // Check for null
+    if ( of == null )
+      return -1;
+
+    if ( fileCount >= maxOpenFiles ) {
+      System.out.println("File Table for " + this.toString() + " is full!");
+      return -1;
+    }
+
+    // Scan for empty entry
+    for ( int i = 0; i < maxOpenFiles; i++ ) {
+      if ( fileTable[i] == null ) {
+        fileTable[i] = of;
+        fileCount++;
+        System.out.println("File mapped to index " + i);
         return i;
       }
     }
@@ -480,6 +510,8 @@ public class UserProcess {
 			return handleExit(a0);
     case syscallCreate:
       return handleCreate(); //handle args
+    case syscallOpen:
+      return handleOpen(); //handle args
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
