@@ -387,17 +387,23 @@ public class UserProcess {
     if ( of == null )
       return -1;
 
+    if ( fileCount >= maxOpenFiles ) {
+      System.out.println("File Table for " + this.toString() + " is full!");
+      return -1; //do something else? 
+    }
+
     // Scan for empty entry
     for (int i = 0; i < maxOpenFiles; i++) {
       if ( fileTable[i] == null ) {
         fileTable[i] = of;
         System.out.println("File mapped to index " + i);
+        fileCount++;
         return i;
       }
     }
 
-    System.out.println("File Table for " + this.toString() + " is full!");
-    return -1; //do something else?
+    Lib.assertNotReached("fileCount does not accurately describe table!");
+    return 0;
   }
 
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
