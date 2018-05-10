@@ -28,6 +28,14 @@ public class UserProcess {
 		pageTable = new TranslationEntry[numPhysPages];
 		for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+
+    // Initialize 0/1 indices w stdin/stdout
+    fileTable = new OpenFile[maxOpenFiles];
+    fileTable[0] = UserKernel.console.openForReading();
+    fileTable[1] = UserKernel.console.openForWriting();
+    for (int i = 2; i < maxOpenFiles; i++)
+      fileTable[i] = null;
+    fileCount = 2;
 	}
 
 	/**
@@ -369,6 +377,29 @@ public class UserProcess {
 		return 0;
 	}
 
+  /**
+   * Handle the creat() system call.
+   */
+  private int handleCreate() { //args: String name
+    OpenFile of = ThreadedKernel.fileSystem.open("../newfile.c", true);
+    
+    // Check for null
+    if ( of == null )
+      return -1;
+
+    // Scan for empty entry
+    for (int i = 0; i < maxOpenFiles; i++) {
+      if ( fileTable[i] == null ) {
+        fileTable[i] = of;
+        System.out.println("File mapped to index " + i);
+        return i;
+      }
+    }
+
+    System.out.println("File Table for " + this.toString() + " is full!");
+    return -1; //do something else?
+  }
+
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
 			syscallRead = 6, syscallWrite = 7, syscallClose = 8,
@@ -441,6 +472,8 @@ public class UserProcess {
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
+    case syscallCreate:
+      return handleCreate(); //handle args
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -496,4 +529,11 @@ public class UserProcess {
 	private static final int pageSize = Processor.pageSize;
 
 	private static final char dbgProcess = 'a';
+
+  /** This process's file table. */
+  protected OpenFile[] fileTable;
+
+  private int maxOpenFiles = 16;
+
+  private int fileCount = 0;
 }
