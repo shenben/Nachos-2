@@ -11,5 +11,7 @@ int main(int argc, char * argv[]) {
   char * name2 = "../newfile2.c";
   int fd1 = creat(name1);
   int fd2 = creat(name2);
+  close(fd1);
+  close(fd2);
   return 0;
 }

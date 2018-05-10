@@ -8,5 +8,6 @@
 
 int main(int argc, char * argv[]) {
   int fd = open("../oldfile.c");
+  close(fd);
   return 0;
 }

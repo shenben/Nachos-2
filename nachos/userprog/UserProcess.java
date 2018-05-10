@@ -381,12 +381,12 @@ public class UserProcess {
    * Handle the creat() system call.
    */
   private int handleCreate() { //args: String name
-    OpenFile of = ThreadedKernel.fileSystem.open("../newfile.c", true);
+    OpenFile of = ThreadedKernel.fileSystem.open("newfile.c", true);
     //FIXME not created...
     
-    // Check for null
-    if ( of == null )
+    if ( of == null ) {
       return -1;
+    }
 
     if ( fileCount >= maxOpenFiles ) {
       System.out.println("File Table for " + this.toString() + " is full!");
@@ -411,11 +411,11 @@ public class UserProcess {
    * Handle the open() system call.
    */
   private int handleOpen() { //args: String name
-    OpenFile of = ThreadedKernel.fileSystem.open("../oldfile.c", true);
+    OpenFile of = ThreadedKernel.fileSystem.open("oldfile.c", true);
 
-    // Check for null
-    if ( of == null )
+    if ( of == null ) {
       return -1;
+    }
 
     if ( fileCount >= maxOpenFiles ) {
       System.out.println("File Table for " + this.toString() + " is full!");
@@ -433,6 +433,73 @@ public class UserProcess {
     }
 
     Lib.assertNotReached("fileCount does not accurately describe table!");
+    return 0;
+  }
+
+  /**
+   * Handle the read() system call.
+   */
+  private int handleRead() { //args: int fd, void * buffer, int count
+    // delete this when impl args
+    int fd = 0;
+    byte[] buffer = new byte[10];
+    int count = 5;
+    // delete this when impl args
+
+    OpenFile of = fileTable[fd];
+
+    if ( of == null ) {
+      return -1;
+    }
+
+    // other error checks?
+
+    int numBytesRead = of.read(buffer, 0, count);
+    
+    return numBytesRead;
+  }
+
+  /**
+   * Handle the write() system call.
+   */
+  private int handleWrite() { //args: int fd, void * buffer, int count
+    // delete this when impl args
+    int fd = 1;
+    byte[] buffer = new byte[10];
+    int count = 5;
+    // delete this when impl args
+
+    OpenFile of = fileTable[fd];
+
+    if ( of == null ) {
+      return -1;
+    }
+
+    // other error checks? 
+
+    int numBytesRead = of.write(buffer, 0, count);
+
+    return numBytesRead;
+  }
+
+  /**
+   * Handle the close() system call.
+   */
+  private int handleClose() { //args: int fd
+    int fd = 2;
+    
+    OpenFile of = fileTable[fd];
+
+    if ( of == null ) {
+      return -1;
+    }
+
+    of.close();
+    // TODO where would an error occur?
+
+    fileTable[fd] = null;
+    fileCount--;
+
     return 0;
   }
 
@@ -512,6 +579,12 @@ public class UserProcess {
       return handleCreate(); //handle args
     case syscallOpen:
       return handleOpen(); //handle args
+    case syscallRead:
+      return handleRead(); //handle args
+    case syscallWrite:
+      return handleWrite(); //handle args
+    case syscallClose:
+      return handleClose(); //handle args
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);

@@ -9,5 +9,6 @@
 int main(int argc, char * argv[]) {
   char * name = "../newfile.c";
   int fd = creat(name);
+  close(fd);
   return 0;
 }
