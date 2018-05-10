@@ -380,17 +380,23 @@ public class UserProcess {
   /**
    * Handle the creat() system call.
    */
-  private int handleCreate() { //args: String name
-    OpenFile of = ThreadedKernel.fileSystem.open("newfile.c", true);
-    //FIXME not created...
+  private int handleCreate(int nameaddr) { 
+    String name = readVirtualMemoryString( nameaddr, maxLen );
+
+    if ( name == null ) {
+      return -1;
+    }
+
+    OpenFile of = ThreadedKernel.fileSystem.open(name, true);
     
     if ( of == null ) {
+      System.out.println("File " + name + " is null");
       return -1;
     }
 
     if ( fileCount >= maxOpenFiles ) {
       System.out.println("File Table for " + this.toString() + " is full!");
-      return -1; //do something else? 
+      return -1; 
     }
 
     // Scan for empty entry
@@ -497,6 +503,8 @@ public class UserProcess {
     of.close();
     // TODO where would an error occur?
 
+    System.out.println("CLOSED fd #" + fd);
+
     fileTable[fd] = null;
     fileCount--;
 
@@ -576,7 +584,7 @@ public class UserProcess {
 		case syscallExit:
 			return handleExit(a0);
     case syscallCreate:
-      return handleCreate(); //handle args
+      return handleCreate(a0);
     case syscallOpen:
       return handleOpen(); //handle args
     case syscallRead:
@@ -647,4 +655,7 @@ public class UserProcess {
   private int maxOpenFiles = 16;
 
   private int fileCount = 0;
+
+  /** String max length. */
+  private int maxLen = 256;
 }
