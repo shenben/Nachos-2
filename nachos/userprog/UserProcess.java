@@ -358,6 +358,7 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
+    // TODO check this.PID == 0
 
 		Machine.halt();
 
@@ -382,17 +383,10 @@ public class UserProcess {
    */
   private int handleCreate(int nameaddr) { 
     String name = readVirtualMemoryString( nameaddr, maxLen );
-
-    if ( name == null ) {
-      return -1;
-    }
+    if ( name == null ) return -1;
 
     OpenFile of = ThreadedKernel.fileSystem.open(name, true);
-    
-    if ( of == null ) {
-      System.out.println("File " + name + " is null");
-      return -1;
-    }
+    if ( of == null ) return -1;
 
     if ( fileCount >= maxOpenFiles ) {
       System.out.println("File Table for " + this.toString() + " is full!");
@@ -416,12 +410,12 @@ public class UserProcess {
   /**
    * Handle the open() system call.
    */
-  private int handleOpen() { //args: String name
-    OpenFile of = ThreadedKernel.fileSystem.open("oldfile.c", true);
+  private int handleOpen(int nameaddr) {
+    String name = readVirtualMemoryString( nameaddr, maxLen );
+    if ( name == null ) return -1;
 
-    if ( of == null ) {
-      return -1;
-    }
+    OpenFile of = ThreadedKernel.fileSystem.open("oldfile.c", true);
+    if ( of == null ) return -1;
 
     if ( fileCount >= maxOpenFiles ) {
       System.out.println("File Table for " + this.toString() + " is full!");
@@ -445,45 +439,52 @@ public class UserProcess {
   /**
    * Handle the read() system call.
    */
-  private int handleRead() { //args: int fd, void * buffer, int count
-    // delete this when impl args
-    int fd = 0;
-    byte[] buffer = new byte[10];
-    int count = 5;
-    // delete this when impl args
+  private int handleRead(int fd, int bufaddr, int count) {
+    System.out.println("In read() handler");
+    if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
 
+    String buf = readVirtualMemoryString( bufaddr, maxLen );
+    if ( buf == null ) return -1;
+
+    byte[] buffer = buf.getBytes();
     OpenFile of = fileTable[fd];
-
-    if ( of == null ) {
-      return -1;
-    }
+    if ( of == null ) return -1;
 
     // other error checks?
 
-    int numBytesRead = of.read(buffer, 0, count);
-    
+    int numBytesRead = 0;
+
+    if ( buffer.length < count ) {
+      System.out.println("IMPL THIS CASE");
+    } else {
+      numBytesRead += of.read(buffer, 0, count);
+    }
+
     return numBytesRead;
   }
 
   /**
    * Handle the write() system call.
    */
-  private int handleWrite() { //args: int fd, void * buffer, int count
-    // delete this when impl args
-    int fd = 1;
-    byte[] buffer = new byte[10];
-    int count = 5;
-    // delete this when impl args
+  private int handleWrite(int fd, int bufaddr, int count) {
+    if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
 
+    String buf = readVirtualMemoryString( bufaddr, maxLen );
+    if ( buf == null ) return -1;
+
+    byte[] buffer = buf.getBytes();
     OpenFile of = fileTable[fd];
-
-    if ( of == null ) {
-      return -1;
-    }
+    if ( of == null ) return -1;
 
     // other error checks? 
 
-    int numBytesRead = of.write(buffer, 0, count);
+    int numBytesRead = 0;
+
+    if ( buffer.length < count ) {
+      System.out.println("IMPL THIS CASE");
+    } else {
+      numBytesRead += of.write(buffer, 0, count);
+    }
 
     return numBytesRead;
   }
@@ -492,11 +493,10 @@ public class UserProcess {
    * Handle the close() system call.
    */
   private int handleClose(int fd) {
-    OpenFile of = fileTable[fd];
+    if ( fd < 0 || fd >= maxOpenFiles ) return -1;
 
-    if ( of == null ) {
-      return -1;
-    }
+    OpenFile of = fileTable[fd];
+    if ( of == null ) return -1;
 
     of.close();
     // TODO where would an error occur?
@@ -584,11 +584,12 @@ public class UserProcess {
     case syscallCreate:
       return handleCreate(a0);
     case syscallOpen:
-      return handleOpen(); //handle args
+      return handleOpen(a0);
     case syscallRead:
-      return handleRead(); //handle args
+      System.out.println("Calling read() handler");
+      return handleRead(a0, a1, a2);
     case syscallWrite:
-      return handleWrite(); //handle args
+      return handleWrite(a0, a1, a2);
     case syscallClose:
       return handleClose(a0);
 
