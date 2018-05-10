@@ -491,9 +491,7 @@ public class UserProcess {
   /**
    * Handle the close() system call.
    */
-  private int handleClose() { //args: int fd
-    int fd = 2;
-    
+  private int handleClose(int fd) {
     OpenFile of = fileTable[fd];
 
     if ( of == null ) {
@@ -592,7 +590,7 @@ public class UserProcess {
     case syscallWrite:
       return handleWrite(); //handle args
     case syscallClose:
-      return handleClose(); //handle args
+      return handleClose(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
