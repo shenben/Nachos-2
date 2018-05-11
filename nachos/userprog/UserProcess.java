@@ -150,6 +150,12 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+    System.out.println("");
+    System.out.println("offset: " + offset);
+    System.out.println("length: " + length);
+    System.out.println("off + leng: " + (offset + length));
+    System.out.println("data.length: " + data.length);
+    System.out.println("cond 3 true? " + ((offset+length) <= data.length));
 		Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
@@ -449,10 +455,19 @@ public class UserProcess {
     if ( of == null ) return -1;
 
     int numBytesRead = 0;
+    int numBytesToInc = 0;
 
-    for (int i = 0; i < count; i += numBytesRead) {
-      numBytesRead += of.read(buffer, numBytesRead, count);
-      writeVirtualMemory( bufaddr + i, buffer, 0, numBytesRead );
+    for (int i = 0; i < count; i += numBytesToInc) {
+      int length;
+      if ( count > pageSize ) {
+        length = pageSize;
+        count -= pageSize;
+      } else {
+        length = count;
+      }
+      numBytesToInc = of.read(buffer, 0, length);
+      numBytesRead += numBytesToInc;
+      writeVirtualMemory( bufaddr + i, buffer, 0, numBytesToInc );
     }
 
     return numBytesRead;
@@ -470,10 +485,19 @@ public class UserProcess {
     if ( of == null ) return -1;
 
     int numBytesWritten = 0;
+    int numBytesToInc = 0;
 
-    for (int i = 0; i < count; i += numBytesWritten) {
-      readVirtualMemory( bufaddr + i, buffer, numBytesWritten, count);
-      numBytesWritten += of.write(buffer, 0, count);
+    for (int i = 0; i < count; i += numBytesToInc) {
+      int length;
+      if ( count > pageSize ) {
+        length = pageSize;
+        count -= pageSize;
+      } else {
+        length = count;
+      }
+      readVirtualMemory( bufaddr + i, buffer, 0, length );
+      numBytesToInc = of.write(buffer, 0, length);
+      numBytesWritten += numBytesToInc;
     }
 
     return numBytesWritten;
