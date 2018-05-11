@@ -6,6 +6,7 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.io.EOFException;
+import java.nio.charset.Charset;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -414,7 +415,7 @@ public class UserProcess {
     String name = readVirtualMemoryString( nameaddr, maxLen );
     if ( name == null ) return -1;
 
-    OpenFile of = ThreadedKernel.fileSystem.open("oldfile.c", true);
+    OpenFile of = ThreadedKernel.fileSystem.open(name, false);
     if ( of == null ) return -1;
 
     if ( fileCount >= maxOpenFiles ) {
@@ -440,13 +441,13 @@ public class UserProcess {
    * Handle the read() system call.
    */
   private int handleRead(int fd, int bufaddr, int count) {
-    System.out.println("In read() handler");
     if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
 
-    String buf = readVirtualMemoryString( bufaddr, maxLen );
+    /*String buf = readVirtualMemoryString( bufaddr, maxLen );
     if ( buf == null ) return -1;
+    System.out.println("read buf: " + buf);*/
 
-    byte[] buffer = buf.getBytes();
+    byte[] buffer = new byte[1000];//buf.getBytes();
     OpenFile of = fileTable[fd];
     if ( of == null ) return -1;
 
@@ -454,11 +455,13 @@ public class UserProcess {
 
     int numBytesRead = 0;
 
-    if ( buffer.length < count ) {
-      System.out.println("IMPL THIS CASE");
-    } else {
-      numBytesRead += of.read(buffer, 0, count);
+    for (int i = 0; i < count; i += buffer.length) {
+      numBytesRead += of.read(buffer, numBytesRead, count);
+      int numWrote = writeVirtualMemory( bufaddr, buffer );
+      bufaddr += numWrote;
     }
+
+    //writeVirtualMemory( bufaddr, buffer );
 
     return numBytesRead;
   }
@@ -480,9 +483,7 @@ public class UserProcess {
 
     int numBytesRead = 0;
 
-    if ( buffer.length < count ) {
-      System.out.println("IMPL THIS CASE");
-    } else {
+    for (int i = 0; i < count; i += buffer.length) {
       numBytesRead += of.write(buffer, 0, count);
     }
 
@@ -586,7 +587,6 @@ public class UserProcess {
     case syscallOpen:
       return handleOpen(a0);
     case syscallRead:
-      System.out.println("Calling read() handler");
       return handleRead(a0, a1, a2);
     case syscallWrite:
       return handleWrite(a0, a1, a2);
