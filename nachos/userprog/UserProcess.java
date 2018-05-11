@@ -457,7 +457,8 @@ public class UserProcess {
     int numBytesRead = 0;
     int numBytesToInc = 0;
 
-    for (int i = 0; i < count; i += numBytesToInc) {
+    int overallCount = count;
+    for (int i = 0; i < overallCount; i += numBytesToInc) {
       int length;
       if ( count > pageSize ) {
         length = pageSize;
@@ -487,7 +488,8 @@ public class UserProcess {
     int numBytesWritten = 0;
     int numBytesToInc = 0;
 
-    for (int i = 0; i < count; i += numBytesToInc) {
+    int overallCount = count;
+    for (int i = 0; i < overallCount; i += numBytesToInc) {
       int length;
       if ( count > pageSize ) {
         length = pageSize;
