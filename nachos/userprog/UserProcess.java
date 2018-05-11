@@ -443,25 +443,17 @@ public class UserProcess {
   private int handleRead(int fd, int bufaddr, int count) {
     if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
 
-    /*String buf = readVirtualMemoryString( bufaddr, maxLen );
-    if ( buf == null ) return -1;
-    System.out.println("read buf: " + buf);*/
+    byte[] buffer = new byte[pageSize];
 
-    byte[] buffer = new byte[1000];//buf.getBytes();
     OpenFile of = fileTable[fd];
     if ( of == null ) return -1;
 
-    // other error checks?
-
     int numBytesRead = 0;
 
-    for (int i = 0; i < count; i += buffer.length) {
+    for (int i = 0; i < count; i += numBytesRead) {
       numBytesRead += of.read(buffer, numBytesRead, count);
-      int numWrote = writeVirtualMemory( bufaddr, buffer );
-      bufaddr += numWrote;
+      writeVirtualMemory( bufaddr + i, buffer, 0, numBytesRead );
     }
-
-    //writeVirtualMemory( bufaddr, buffer );
 
     return numBytesRead;
   }
@@ -472,22 +464,19 @@ public class UserProcess {
   private int handleWrite(int fd, int bufaddr, int count) {
     if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
 
-    String buf = readVirtualMemoryString( bufaddr, maxLen );
-    if ( buf == null ) return -1;
+    byte[] buffer = new byte[pageSize];
 
-    byte[] buffer = buf.getBytes();
     OpenFile of = fileTable[fd];
     if ( of == null ) return -1;
 
-    // other error checks? 
+    int numBytesWritten = 0;
 
-    int numBytesRead = 0;
-
-    for (int i = 0; i < count; i += buffer.length) {
-      numBytesRead += of.write(buffer, 0, count);
+    for (int i = 0; i < count; i += numBytesWritten) {
+      readVirtualMemory( bufaddr + i, buffer, numBytesWritten, count);
+      numBytesWritten += of.write(buffer, 0, count);
     }
 
-    return numBytesRead;
+    return numBytesWritten;
   }
 
   /**
@@ -500,7 +489,6 @@ public class UserProcess {
     if ( of == null ) return -1;
 
     of.close();
-    // TODO where would an error occur?
 
     System.out.println("CLOSED fd #" + fd);
 
