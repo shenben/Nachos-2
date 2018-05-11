@@ -498,6 +498,18 @@ public class UserProcess {
     return 0;
   }
 
+  /**
+   * Handle the unlink() system call.
+   */
+  private int handleUnlink(int nameaddr) {
+    String name = readVirtualMemoryString( nameaddr, maxLen );
+    if ( name == null ) return -1;
+
+    if ( ThreadedKernel.fileSystem.remove(name) ) return 0;
+    
+    return -1;
+  }
+
 	private static final int syscallHalt = 0, syscallExit = 1, syscallExec = 2,
 			syscallJoin = 3, syscallCreate = 4, syscallOpen = 5,
 			syscallRead = 6, syscallWrite = 7, syscallClose = 8,
@@ -580,6 +592,8 @@ public class UserProcess {
       return handleWrite(a0, a1, a2);
     case syscallClose:
       return handleClose(a0);
+    case syscallUnlink:
+      return handleUnlink(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
