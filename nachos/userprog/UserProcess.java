@@ -150,20 +150,16 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-    System.out.println("");
-    System.out.println("offset: " + offset);
-    System.out.println("length: " + length);
-    System.out.println("off + leng: " + (offset + length));
-    System.out.println("data.length: " + data.length);
-    System.out.println("cond 3 true? " + ((offset+length) <= data.length));
+    System.out.println("vaddr: " + vaddr);
 		Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
 		byte[] memory = Machine.processor().getMemory();
+    System.out.println("memlen: " + memory.length);
 
 		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
+			return -1;
 
 		int amount = Math.min(length, memory.length - vaddr);
 		System.arraycopy(memory, vaddr, data, offset, amount);
@@ -205,7 +201,7 @@ public class UserProcess {
 
 		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
+			return -1;
 
 		int amount = Math.min(length, memory.length - vaddr);
 		System.arraycopy(data, offset, memory, vaddr, amount);
@@ -497,7 +493,11 @@ public class UserProcess {
       } else {
         length = count;
       }
-      readVirtualMemory( bufaddr + i, buffer, 0, length );
+      System.out.println("length: " + length);
+      System.out.println("bufaddr: " + bufaddr);
+      int check = readVirtualMemory( bufaddr + i, buffer, 0, length );
+      if ( check == -1 ) return -1;
+      System.out.println("bufaddr + i: " + (bufaddr + i));
       numBytesToInc = of.write(buffer, 0, length);
       numBytesWritten += numBytesToInc;
     }
@@ -615,6 +615,7 @@ public class UserProcess {
     case syscallRead:
       return handleRead(a0, a1, a2);
     case syscallWrite:
+      System.out.println("handling write... ");
       return handleWrite(a0, a1, a2);
     case syscallClose:
       return handleClose(a0);
