@@ -150,12 +150,10 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-    System.out.println("vaddr: " + vaddr);
 		Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
 		byte[] memory = Machine.processor().getMemory();
-    System.out.println("memlen: " + memory.length);
 
 		// for now, just assume that virtual addresses equal physical addresses
 		if (vaddr < 0 || vaddr >= memory.length)
@@ -464,7 +462,8 @@ public class UserProcess {
       }
       numBytesToInc = of.read(buffer, 0, length);
       numBytesRead += numBytesToInc;
-      writeVirtualMemory( bufaddr + i, buffer, 0, numBytesToInc );
+      int check = writeVirtualMemory( bufaddr + i, buffer, 0, numBytesToInc );
+      if ( check == -1 ) return -1;
     }
 
     return numBytesRead;
@@ -493,11 +492,8 @@ public class UserProcess {
       } else {
         length = count;
       }
-      System.out.println("length: " + length);
-      System.out.println("bufaddr: " + bufaddr);
       int check = readVirtualMemory( bufaddr + i, buffer, 0, length );
       if ( check == -1 ) return -1;
-      System.out.println("bufaddr + i: " + (bufaddr + i));
       numBytesToInc = of.write(buffer, 0, length);
       numBytesWritten += numBytesToInc;
     }
@@ -615,7 +611,6 @@ public class UserProcess {
     case syscallRead:
       return handleRead(a0, a1, a2);
     case syscallWrite:
-      System.out.println("handling write... ");
       return handleWrite(a0, a1, a2);
     case syscallClose:
       return handleClose(a0);
