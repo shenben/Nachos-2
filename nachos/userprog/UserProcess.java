@@ -25,9 +25,19 @@ public class UserProcess {
 	 */
 	public UserProcess() {
 		int numPhysPages = Machine.processor().getNumPhysPages();
+		numPages = 0;
 		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
+
+    // Only gets a page when you need one
+		/*for (int i = 0; i < numPhysPages; i++)
 			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+
+			fileTable = new OpenFile[maxOpenFiles];
+			// 0 must for standard reading
+			fileTable[0] = UserKernel.console.openForReading();
+			fileCount++;
+			fileTable[1] = UserKernel.console.openForWriting();
+			fileCount++;*/
 	}
 
 	/**
@@ -293,7 +303,7 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		/*if (numPages > Machine.processor().getNumPhysPages()) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
@@ -314,7 +324,29 @@ public class UserProcess {
 			}
 		}
 
-		return true;
+		return true;*/
+		if( numPages > UserKernel.getNumFreePages() ) {
+      coff.close();
+			Lib.debug( dbgProcess, "\tinsufficient physical memory." );
+			return false;
+		}
+
+		// For each page we need, we request for one page
+		for( int i = 0 ; i < numPages ; i++ ) {
+      requestOnePage();
+		}
+		// Load sections
+		for( int s = 0 ; s < coff.getNumSections() ; s++ ) {
+      CoffSection section = coff.getSection(s);
+
+			Lib.debug( dbgProcess, "\tinitializing " + section.getName() +
+			  " section ( " + section.getLength() + " pages)" );
+
+			for( int i = 0 ; i < section.getLength() ; i++ ) {
+        int vpn = section.getFirstVPN() + i;
+				section.loadPage(pageTable[vpn].ppn, vpn);
+			}
+		}
 	}
 
 	/**
@@ -343,7 +375,186 @@ public class UserProcess {
 
 		// initialize the first two argument registers to argc and argv
 		processor.writeRegister(Processor.regA0, argc);
+		fileCount++;
 		processor.writeRegister(Processor.regA1, argv);
+		fileCount++;
+	}
+
+  /**
+	 * Handle the creat() system call
+	 *
+	 * @param nameaddr - the vma of the string name of the 
+	 *                   file user wants to create
+	 *
+	 * @return file descriptor if no error occurs
+	 *         -1 if an error ocurrs
+	 */
+  private int handleCreat(int nameaddr) {
+    // Check that we have enough space for opening new files
+		if( fileCount >= maxOpenFiles ) return -1;
+
+    String filename = readVirtualMemoryString( nameaddr, maxLen );
+		if( filename == null ) return -1; // Error
+
+		// True to create the file if it does not exist yet
+		OpenFile fileOpened = ThreadedKernel.fileSystem.open( filename, true );
+		if( fileOpened == null ) return -1; // Error
+
+		// Get a space in the fileTable for this file
+		for( int i = 0 ; i < maxOpenFiles ; i++ ){
+      if( fileTable[i] == null ){
+        fileTable[i] = fileOpened;
+				fileCount++;
+//System.out.println( "now we created file " + filename + " with decriptor " + i);
+				return i;
+			}
+		}
+
+		Lib.assertNotReached( "The file is not stored in the table!" );
+		return -1; // Error
+		
+	}
+
+	/**
+	 * Handle the open() system call.
+	 *
+	 * @param nameaddr - the vma of the string name of the 
+	 *                   file user wants to open
+	 *
+	 * @return file descriptor if no error occurs
+	 *         -1 if an error ocurrs
+	 */
+  private int handleOpen(int nameaddr) {
+    // Check that we have enough space for opening new files
+		if( fileCount >= maxOpenFiles ) return -1;
+
+    String filename = readVirtualMemoryString( nameaddr, maxLen );
+		if( filename == null ) return -1; // Error
+
+		// False so we don't create the file if it does not exist
+		OpenFile fileOpened = ThreadedKernel.fileSystem.open( filename, false );
+		if( fileOpened == null ) return -1; // Error
+
+		// Get a space in the fileTable for this file
+		for( int i = 0 ; i < maxOpenFiles ; i++ ){
+      if( fileTable[i] == null ){
+        fileTable[i] = fileOpened;
+				fileCount++;
+				return i;
+			}
+		}
+
+		Lib.assertNotReached( "The file is not stored in the table!" );
+		return -1; // Error
+		
+	}
+
+	/**
+	 * Handle the read() system call.
+	 *
+	 * @param fileDescriptor - the index of the file we want 
+	 * @param bufaddr - pointer to where we want to transfer the data from the file
+	 * @param count - how many bytes we want from the file
+	 */
+	private int handleRead(int fileDescriptor, int bufaddr, int count) {
+	  if( fileDescriptor >= maxOpenFiles || fileDescriptor < 0 ) return -1;
+    OpenFile file = fileTable[fileDescriptor];
+		if( file == null ) return -1; // Error
+
+		if( count < 0 ) return -1; // Error
+		if( count == 0 ) return 0; 
+
+    byte[] buf = new byte[pageSize];
+		int numBytesReadTotal = 0;
+		int numBytesReadOnce = 0;
+
+		while( numBytesReadTotal < count ) {
+		  if( (count - numBytesReadTotal) >= pageSize ) numBytesReadOnce = pageSize;
+			else numBytesReadOnce = count - numBytesReadTotal;
+
+		  // Keep reading until we get all the bytes we want
+		  numBytesReadOnce = file.read(buf, 0, numBytesReadOnce );
+//System.out.println( "printing the bytes: " +  new String(buf));
+
+			// Write the read bytes off to the pointer
+      int retVal =  writeVirtualMemory( bufaddr + numBytesReadTotal, 
+			                                  buf, 0, numBytesReadOnce);
+
+      if( retVal <= 0 ) return -1; // Out of memory for pointer
+			
+			numBytesReadTotal += numBytesReadOnce;
+		}
+//System.out.println( "We read bytes : " + numBytesReadTotal );
+    return numBytesReadTotal;
+	}
+
+  /**
+	 * Handle the write() system call.
+	 *
+	 * @param fileDescriptor - the index of the file we want to write it
+	 * @param bufaddr - the address of the butter where we are writing from
+	 * @param count - the number of bytes we want to write to file
+	 */
+	private int handleWrite(int fileDescriptor, int bufaddr, int count) {
+    if( fileDescriptor >= maxOpenFiles || fileDescriptor < 0 ) return -1;
+		OpenFile file = fileTable[fileDescriptor];
+		if( file == null ) return -1;
+
+		if( count < 0 ) return -1;
+		if( count == 0 ) return 0;
+
+    byte[] buf = new byte[pageSize];
+		int numBytesWrittenTotal = 0;
+		int numBytesWrittenOnce = 0;
+
+		while( numBytesWrittenTotal < count ) {
+		  // Calculate how many bytes to get from buffer
+		  if( ( count - numBytesWrittenTotal ) >= pageSize ) 
+			  numBytesWrittenOnce = pageSize;
+			else numBytesWrittenOnce = count - numBytesWrittenTotal;
+
+			// Get the bytes from bufaddr to buf
+			int retValSucking = readVirtualMemory( bufaddr + numBytesWrittenTotal,
+		                                  buf, 0, numBytesWrittenOnce );
+      if( retValSucking <= 0 ) return -1;
+
+			numBytesWrittenTotal += numBytesWrittenOnce;
+
+//System.out.println( "in write we are writing: " + new String(buf));
+			// Write buf into file
+			int retValWriting = file.write( buf, 0, retValSucking );
+			if( retValWriting == -1 ) return -1;
+		}
+
+		return numBytesWrittenTotal;
+	}
+
+  /**
+	 * Hand the close() system call.
+	 *
+	 * @param fileDescriptor - the file index we want to close
+	 */
+	private int handleClose(int fileDescriptor){
+    if( fileDescriptor < 0 || fileDescriptor >= maxOpenFiles ) return -1;
+		OpenFile file = fileTable[fileDescriptor];
+		if( file == null ) return -1;
+
+		file.close();
+		fileTable[fileDescriptor] = null;
+		fileCount--;
+
+		return 0;
+	}
+
+  private int handleUnlink(int nameaddr){
+    if( fileCount <= 0 ) return -1;
+		String fileName = readVirtualMemoryString( nameaddr, maxLen );
+
+		if( fileName == null ) return -1;
+		
+		if( ThreadedKernel.fileSystem.remove(fileName) ) return 0;
+
+		return -1; //error
 	}
 
 	/**
@@ -436,11 +647,24 @@ public class UserProcess {
 	 * @return the value to be returned to the user.
 	 */
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
+System.out.println( "syscall is : " + syscall);
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
+		case syscallCreate:
+		  return handleCreat(a0);
+		case syscallOpen:
+		  return handleOpen(a0);
+		case syscallRead:
+		  return handleRead(a0, a1, a2);
+		case syscallWrite:
+		  return handleWrite(a0, a1, a2);
+	  case syscallClose:
+		  return handleClose(a0);
+		case syscallUnlink:
+		  return handleUnlink(a0);
 
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -496,4 +720,25 @@ public class UserProcess {
 	private static final int pageSize = Processor.pageSize;
 
 	private static final char dbgProcess = 'a';
+
+  /** For handling the access to file system */
+	private static final int maxOpenFiles = 16;
+	private static int fileCount = 0;
+	protected static OpenFile[] fileTable;
+	private int maxLen = 256; // Max bits for the name of a file
+
+	/** For handling multiprogramming */
+	/**
+	 * request one page from kernel
+	 */
+	private int requestOnePage(){
+    int newPage = UserKernel.giveOnePage();
+		if( newPage == -1 ) return -1; // Out of memory
+
+		// Add the new physical page to the process's page table
+		pageTable[numPages] = new TranslationEntry(numPages, newPage,
+		                                           true, false, false );
+		numPages++;
+    return newPage;
+	}
 }

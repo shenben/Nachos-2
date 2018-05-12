@@ -3,6 +3,7 @@ package nachos.userprog;
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
+import java.util.*;
 
 /**
  * A kernel that can support multiple user processes.
@@ -29,6 +30,17 @@ public class UserKernel extends ThreadedKernel {
 				exceptionHandler();
 			}
 		});
+
+		// Initialize freePhyPage if it has not been initialized
+		boolean intStatus = Machine.interrupt().disable();
+		if( freePhyPages == null ) {
+      for( int i = 0 ; i < Machine.processor().getNumPhyPages(); i ++ ) {
+        // Add each page to the table
+				freePhyPages.add(i);
+			}
+		}
+		if( pageLock == null ) pageLock = new Lock();
+		Machine.interrupt().restore(intStatus);
 	}
 
 	/**
@@ -113,4 +125,31 @@ public class UserKernel extends ThreadedKernel {
 
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
+
+  /** To keep track of how many free pages there are */
+	private static LinkedList<Integer> freePhyPages;
+	private static Lock pageLock;
+	// Helper functions
+  public static int getNumFreePages() {
+	  pageLock.acquire();
+    int pageNum = freePhyPages.size();
+		pageLock.release();
+		return pageNum;
+	}
+
+	/**
+	 * giveOnePage() 
+	 * Gives out one more page
+	 *
+	 * returns the page number
+	 * or -1 if error occurs
+	 */
+	public static int giveOnePage() {
+	  pageLock.acquire();
+    if( freePhyPages.size() <= 0 ) return -1;
+
+		int availPage = freePhyPages.pop();
+    pageLock.release();
+		return availPage;
+	}
 }
