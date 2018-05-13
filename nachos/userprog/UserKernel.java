@@ -4,6 +4,8 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
+import java.util.LinkedList;
+
 /**
  * A kernel that can support multiple user processes.
  */
@@ -23,6 +25,16 @@ public class UserKernel extends ThreadedKernel {
 		super.initialize(args);
 
 		console = new SynchConsole(Machine.console());
+
+    lock = new Lock();
+    cv = new Condition(lock);
+
+    numPhysPages = Machine.processor().getNumPhysPages();
+    numFreePages = numPhysPages;
+    freePages = new LinkedList<Integer>();
+    for (int i = 0; i < numFreePages; i++) {
+      freePages.add(i);
+    }
 
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() {
@@ -108,9 +120,61 @@ public class UserKernel extends ThreadedKernel {
 		super.terminate();
 	}
 
+  /**
+   * Accessor for number of freePages. 
+   */
+  public static int getNumFreePages() {
+    return numFreePages;
+  }
+
+  /**
+   * Mutator for allocating pages. TODO use CV???
+   */
+  public static int allocPage() {
+    lock.acquire();
+
+    if ( numFreePages == 0 )
+      return -1;
+
+    int page = freePages.removeFirst();
+    numFreePages--;
+
+    lock.release();
+
+    return page;
+  }
+
+  /**
+   * Mutator for deallocating pages. 
+   */
+  public static int deallocPage(int ppn) {
+    lock.acquire();
+
+    if ( ppn >= numPhysPages || ppn < 0 )
+      return -1;
+
+    freePages.add(ppn);
+    numFreePages++;
+
+    lock.release();
+
+    return ppn;
+  }
+
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
+
+  /** Trackers for free physical pages of memory. */
+  private static LinkedList<Integer> freePages;
+
+  private static int numFreePages;
+  
+  private static int numPhysPages;
+
+  /** Sync primitives for accessing freePages. */
+  private static Lock lock;
+  private Condition cv;
 }

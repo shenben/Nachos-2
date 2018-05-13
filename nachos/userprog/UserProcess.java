@@ -25,10 +25,7 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+		numFreePhys = UserKernel.getNumFreePages();
 
     // Initialize 0/1 indices w stdin/stdout
     fileTable = new OpenFile[maxOpenFiles];
@@ -37,6 +34,9 @@ public class UserProcess {
     for (int i = 2; i < maxOpenFiles; i++)
       fileTable[i] = null;
     fileCount = 2;
+   
+    // Init PID
+    pid = numProcesses++;
 	}
 
 	/**
@@ -156,7 +156,8 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		//if (vaddr < 0 || vaddr >= memory.length)
+    if (vaddr < 0 || vaddr >= (numPages * pageSize))
 			return -1;
 
 		int amount = Math.min(length, memory.length - vaddr);
@@ -198,7 +199,8 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
+		//if (vaddr < 0 || vaddr >= memory.length)
+    if (vaddr < 0 || vaddr >= (numPages * pageSize))
 			return -1;
 
 		int amount = Math.min(length, memory.length - vaddr);
@@ -302,11 +304,16 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
+		if (numPages > numFreePhys) {
 			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+    System.out.println("this PID = " + pid);
+    System.out.println("Num free pages starting: " + UserKernel.getNumFreePages());
+
+		pageTable = new TranslationEntry[numPages];
+    int prevSectionLength = 0;
 
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
@@ -320,8 +327,22 @@ public class UserProcess {
 
 				// for now, just assume virtual addresses=physical addresses
 				section.loadPage(i, vpn);
+
+        int ppn = UserKernel.allocPage();
+        if ( section.isReadOnly() ) {
+          pageTable[vpn] = new TranslationEntry(vpn, ppn, true, true, false, false);
+        } else {
+          pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+        }
 			}
+      prevSectionLength += section.getLength();
 		}
+
+		for (int i = prevSectionLength; i < numPages; i++) {
+      int ppn = UserKernel.allocPage();
+			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+    }
+    System.out.println("Num free pages left: " + UserKernel.getNumFreePages());
 
 		return true;
 	}
@@ -359,7 +380,7 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
-    // TODO check this.PID == 0
+    if ( this.pid != 0 ) return 0;
 
 		Machine.halt();
 
@@ -672,6 +693,9 @@ public class UserProcess {
 
 	private static final char dbgProcess = 'a';
 
+  /** Access UserKernel for number of free physical pages. */
+  private int numFreePhys;
+
   /** This process's file table. */
   protected OpenFile[] fileTable;
 
@@ -681,4 +705,9 @@ public class UserProcess {
 
   /** String max length. */
   private int maxLen = 256;
+
+  /** PID of this process vars */
+  private int pid;
+  
+  private static int numProcesses = 0;
 }
