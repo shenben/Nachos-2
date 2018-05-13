@@ -27,7 +27,6 @@ public class UserKernel extends ThreadedKernel {
 		console = new SynchConsole(Machine.console());
 
     lock = new Lock();
-    cv = new Condition(lock);
 
     numPhysPages = Machine.processor().getNumPhysPages();
     numFreePages = numPhysPages;
@@ -176,5 +175,4 @@ public class UserKernel extends ThreadedKernel {
 
   /** Sync primitives for accessing freePages. */
   private static Lock lock;
-  private Condition cv;
 }

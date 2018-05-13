@@ -6,7 +6,6 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.io.EOFException;
-import java.nio.charset.Charset;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -156,7 +155,6 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		//if (vaddr < 0 || vaddr >= memory.length)
     if (vaddr < 0 || vaddr >= (numPages * pageSize))
 			return -1;
 
@@ -199,7 +197,6 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-		//if (vaddr < 0 || vaddr >= memory.length)
     if (vaddr < 0 || vaddr >= (numPages * pageSize))
 			return -1;
 
