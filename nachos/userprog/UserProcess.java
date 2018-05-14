@@ -43,6 +43,7 @@ public class UserProcess {
 			fileCount++;
 
 			childProcesses = new HashMap<Integer, UserProcess>();
+		  currentThread = KThread.currentThread();
 	}
 
 	/**
@@ -740,8 +741,11 @@ public class UserProcess {
 			                                       ptr, 0, sizeOfPtr );
 			if( numBytesRead != sizeOfPtr ) return -1;
 			// Got this way of converting 4 bytes to an int from
-			// https://stackoverflow.com/questions/2840190/java-convert-4-bytes-to-int/2840206#2840206
-			argvPtr= ByteBuffer.wrap(ptr).getInt();
+			// https://stackoverflow.com/questions/9581530/converting-from-byte-to-int-in-java
+			argvPtr= (ptr[0] << 24) & 0xff |
+			         (ptr[1] << 16) & 0x00ff |
+							 (ptr[2] << 8 ) & 0x0000ff|
+							 (ptr[3] << 0 ) & 0x000000ff;
 			if( argvPtr < 0 || argvPtr > numPages * pageSize ) return -1;
 
       argv[i] = readVirtualMemoryString( argvPtr, maxLen );
@@ -762,7 +766,21 @@ public class UserProcess {
 	 * Handle join() system call.
 	 */
 	private int handleJoin(int childPID, int statusAddr) {
-    // First check if the PID of the child's PID is stil 
+    // First check if the PID of the child's PID is still a child
+		if( !childProcesses.containsKey( childPID ) ) return 1;
+
+		UserProcess childProcess = childProcesses.get( childPID );
+		childProcess.parentJoined = true;
+		currentThread.sleep();
+
+    // Resume and disown the child, check the exit status
+		int childExitStat;
+    byte childExitBytes[] = new byte[sizeOfPtr];
+		if( readVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
+		    != sizeOfPtr ) return 0;
+		childExitStat = ByteBuffer.wrap( childExitBytes ).getInt();
+		if( childExitStat != 1 ) return 0;
+    else return 1;
 	}
 
 	/**
@@ -770,6 +788,7 @@ public class UserProcess {
 	 */
 	private int handleHalt() {
 
+    if( processID != 0 ) return -1;
 		Machine.halt();
 
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
@@ -811,8 +830,16 @@ public class UserProcess {
 			childProcesses.remove( pair.getKey() );
 		}
 
+    exitStatus = status;
     if( processID == 0 ) Kernel.kernel.terminate();
-    KThread.currentThread().finish();
+		else {
+		  if( parentJoined ) {
+        parentJoined = false;
+				parentProcess.currentThread.ready();
+			}
+		  parentProcess.deleteChildProcess( this.processID );
+      KThread.currentThread().finish();
+		}
 		return 0;
 	}
 
@@ -891,6 +918,8 @@ public class UserProcess {
 			return handleExit(a0);
 		case syscallExec:
 		  return handleExec(a0, a1, a2 );
+		case syscallJoin:
+		  return handleJoin(a0, a1);
 		case syscallCreate:
 		  return handleCreat(a0);
 		case syscallOpen:
@@ -966,6 +995,9 @@ public class UserProcess {
 	private int maxLen = 256; // Max bits for the name of a file
 	private static final int sizeOfPtr = 4;
 
+	private int exitStatus;
+	public KThread currentThread;
+
 	/** For handling multiprogramming */
 	/**
 	 * request one page from kernel
@@ -997,6 +1029,7 @@ public class UserProcess {
 	public int processID;
 	private UserProcess parentProcess;
 	private HashMap<Integer, UserProcess> childProcesses; // Map to store child processes 
+	public boolean parentJoined = false;
   public int setPID( int itsID ) {
     processID = itsID;
 		return processID;
@@ -1011,5 +1044,8 @@ public class UserProcess {
 	public int addChildProcess( int id, UserProcess child ) {
     childProcesses.put( id, child );
 		return id;
+	}
+	public void deleteChildProcess( int id ) {
+    childProcesses.remove(id);
 	}
 }
