@@ -4,8 +4,11 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
+import java.nio.ByteBuffer;
 
 import java.io.EOFException;
+
+import java.util.*;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -24,20 +27,22 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		numPages = 0;
-		pageTable = new TranslationEntry[numPhysPages];
+	//	int numPhysPages = Machine.processor().getNumPhysPages();
+//		numPages = 0;
+	//	pageTable = new TranslationEntry[numPhysPages];
 
     // Only gets a page when you need one
 		/*for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);*/
 
 			fileTable = new OpenFile[maxOpenFiles];
 			// 0 must for standard reading
 			fileTable[0] = UserKernel.console.openForReading();
 			fileCount++;
 			fileTable[1] = UserKernel.console.openForWriting();
-			fileCount++;*/
+			fileCount++;
+
+			childProcesses = new HashMap<Integer, UserProcess>();
 	}
 
 	/**
@@ -156,14 +161,70 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		// for now, just assume that virtual addresses equal physical addresses
-		if (vaddr < 0 || vaddr >= memory.length)
-			return 0;
+		if ( vaddr < 0 || vaddr >= memory.length) return 0;
+/*
+		int amount = Math.min( length, memory.length - vaddr );
+		System.arraycopy( memory, vaddr, data, offset, amount);
+		return amount;*/
 
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+    // Break the length into pages
+    int vPageBegin = vaddr / pageSize;
+		int pageLoc = vaddr % pageSize;
 
-		return amount;
+		// Check the physical address makes sens
+		if( vPageBegin >= numPages || 
+		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid )
+		 return 0;
+
+		int pPageBegin = pageTable[vPageBegin].ppn;
+		int paddr = pPageBegin * pageSize + pageLoc;
+
+    if( paddr < 0 || paddr >= memory.length ) return 0;
+
+		// First part of the bytes
+		int firstPageLeft = pageSize - pageLoc;
+		// When the bits ends just within this page
+		if( firstPageLeft >= length ) {
+      System.arraycopy(memory, paddr, data, offset, length);
+			pageTable[vPageBegin].used = true;
+			return length;
+		}
+		// When the bits ends beyong this page
+		else {
+		  // The first part
+      System.arraycopy(memory, paddr, data, offset, firstPageLeft );
+
+			// Middle part
+			int remainBytes = length - firstPageLeft;
+			int readPages = vPageBegin + 1;
+			offset += (firstPageLeft );
+			if( readPages >= numPages || offset > length ) return remainBytes;
+			while( remainBytes > pageSize ) {
+			  // Error
+			  if( pageTable[readPages] == null || !pageTable[readPages].valid ) 
+				  return (length - remainBytes);
+
+				// Set the page's attributes
+				pageTable[readPages].used = true;
+
+			  paddr = pageTable[readPages].ppn * pageSize;
+        System.arraycopy( memory, paddr, data, offset, pageSize );
+				// Update the address and offset
+				remainBytes -= pageSize;
+				offset += (pageSize);
+				readPages++;
+			}
+			
+			// The final part
+			paddr = pageTable[readPages].ppn * pageSize;
+			System.arraycopy( memory, paddr, data, offset, remainBytes );
+			pageTable[readPages].used = true;
+			remainBytes = 0;
+			return (length - remainBytes);
+		}
+
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
 	}
 
 	/**
@@ -193,7 +254,7 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		Lib.assertTrue(offset >= 0 && length >= 0
+		/*Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
 		byte[] memory = Machine.processor().getMemory();
@@ -205,7 +266,91 @@ public class UserProcess {
 		int amount = Math.min(length, memory.length - vaddr);
 		System.arraycopy(data, offset, memory, vaddr, amount);
 
-		return amount;
+		return amount;*/
+  	Lib.assertTrue(offset >= 0 && length >= 0
+				&& offset + length <= data.length);
+
+		byte[] memory = Machine.processor().getMemory();
+
+    // Break the length into pages
+    int vPageBegin = vaddr / pageSize;
+		int pageLoc = vaddr % pageSize;
+    if( vPageBegin >= numPages ) return 0;
+
+		// Check the physical address makes sens
+		if( pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ||
+				pageTable[vPageBegin].readOnly ) 
+		  return 0;
+
+		int pPageBegin = pageTable[vPageBegin].ppn;
+		int paddr = pPageBegin * pageSize + pageLoc;
+
+//System.out.println( "Now the paddr is at " + paddr );
+		if( paddr < 0 || paddr >= memory.length ) return 0;
+
+		// First part of the bytes
+		int firstPageLeft = pageSize - pageLoc;
+		// When the bits ends just within this page
+		if( firstPageLeft >= length ) {
+      System.arraycopy(data, offset, memory, paddr, length);
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].dirty = true;
+			return length;
+		}
+		// When the bits ends beyong this page
+		else {
+		  // The first part
+      System.arraycopy(data, offset, memory, paddr, firstPageLeft );
+//System.out.println( "First page " + vPageBegin + " has " + firstPageLeft + " left." );
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].dirty = true;
+
+			// Middle part
+			int remainBytes = length - firstPageLeft;
+			offset += (firstPageLeft);
+			int pageRead = vPageBegin + 1;
+			if( pageRead >= numPages || offset > length ) return remainBytes;
+//System.out.println( "\n Now we are on page " + pageRead
+//                     + " and physical page " + pageTable[pageRead].ppn
+//                     + " reading " + remainBytes + " bytes." );
+//System.out.println( "The offset is " + offset + " and we have " + data.length + 
+//                    " and the last byte we are supposed to copy is " + 
+//                     data[767] );
+			while( remainBytes > pageSize ) {
+//System.out.println( "\n You should not see this message. " );
+				// Error
+				if( pageTable[pageRead] == null || pageTable[pageRead].readOnly || 
+				    !pageTable[pageRead].valid ) 
+				  return length - remainBytes;
+
+				// Set the page's attribute
+				pageTable[pageRead].used = true;
+				pageTable[pageRead].dirty = true;
+				
+			  paddr = pageTable[pageRead].ppn * pageSize;
+        System.arraycopy( data, offset, memory, paddr, pageSize );
+				// Update the address and offset
+				remainBytes -= pageSize;
+				offset += (pageSize);
+				pageRead++;
+			}
+			
+			// The final part
+			paddr = pageTable[pageRead].ppn * pageSize;
+//System.out.println( "after the first two parts the paddr is " + paddr );
+			System.arraycopy( data, offset, memory, paddr, remainBytes );
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].used = false;
+			remainBytes = 0;
+
+			return length - remainBytes;
+		}
+
+//		int amount = Math.min(length, memory.length - vaddr);
+//		System.arraycopy(memory, vaddr, data, offset, amount);
+
+	//	return 0;
+
 	}
 
 	/**
@@ -331,9 +476,14 @@ public class UserProcess {
 			return false;
 		}
 
+    pageTable = new TranslationEntry[numPages];
 		// For each page we need, we request for one page
 		for( int i = 0 ; i < numPages ; i++ ) {
-      requestOnePage();
+      if( requestOnePage(i) == -1 ){
+        returnPages();
+				coff.close();
+				return false;
+			}
 		}
 		// Load sections
 		for( int s = 0 ; s < coff.getNumSections() ; s++ ) {
@@ -344,15 +494,19 @@ public class UserProcess {
 
 			for( int i = 0 ; i < section.getLength() ; i++ ) {
         int vpn = section.getFirstVPN() + i;
-				section.loadPage(pageTable[vpn].ppn, vpn);
+				section.loadPage(i, pageTable[vpn].ppn);
 			}
 		}
+
+		return true;
 	}
 
 	/**
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+    // Return all the pages
+	  returnPages();
 	}
 
 	/**
@@ -513,10 +667,12 @@ public class UserProcess {
 			  numBytesWrittenOnce = pageSize;
 			else numBytesWrittenOnce = count - numBytesWrittenTotal;
 
+//System.out.println( "UserProcess, line + 639" );
 			// Get the bytes from bufaddr to buf
 			int retValSucking = readVirtualMemory( bufaddr + numBytesWrittenTotal,
 		                                  buf, 0, numBytesWrittenOnce );
       if( retValSucking <= 0 ) return -1;
+//System.out.println( "Read from memory: " + new String(buf) );
 
 			numBytesWrittenTotal += numBytesWrittenOnce;
 
@@ -557,6 +713,58 @@ public class UserProcess {
 		return -1; //error
 	}
 
+  /**
+	 * Handle the exec() system call.
+	 */
+	private int handleExec(int fileNameAddr, int argc, int argvAddr ) {
+    if( fileCount == maxOpenFiles ) return -1;
+		if( argc < 0 ) return -1;
+		if( argvAddr < 0 || argvAddr > numPages * pageSize ) return -1;
+
+    // Load the file
+		String fileName = readVirtualMemoryString( fileNameAddr, maxLen );
+		if( fileName == null ) return -1;
+
+		// Check the coff extension
+		String extCoff = ".coff";
+		String extension = fileName.substring( fileName.length() - extCoff.length(),
+		                                       fileName.length());
+		if( !extension.equals( extCoff )) return -1;
+
+		// Get all the args
+		byte ptr[] = new byte[sizeOfPtr];
+		int argvPtr; // Pointer to string
+		String argv[] = new String[argc]; // Strings
+		for( int i = 0 ; i < argc ; i++ ) {
+      int numBytesRead = readVirtualMemory( (i * sizeOfPtr + argvAddr), 
+			                                       ptr, 0, sizeOfPtr );
+			if( numBytesRead != sizeOfPtr ) return -1;
+			// Got this way of converting 4 bytes to an int from
+			// https://stackoverflow.com/questions/2840190/java-convert-4-bytes-to-int/2840206#2840206
+			argvPtr= ByteBuffer.wrap(ptr).getInt();
+			if( argvPtr < 0 || argvPtr > numPages * pageSize ) return -1;
+
+      argv[i] = readVirtualMemoryString( argvPtr, maxLen );
+			if( argv[i] == null ) return -1;
+		}
+
+		UserProcess childProcess = UserProcess.newUserProcess();
+		int id = UserKernel.increaseProcess() - 1;
+		childProcess.setPID( id );
+		childProcess.setParent( this );
+		this.addChildProcess( id, childProcess );
+
+    Lib.assertTrue( childProcess.execute( fileName, argv ) );
+		return id;
+	}
+
+  /**
+	 * Handle join() system call.
+	 */
+	private int handleJoin(int childPID, int statusAddr) {
+    // First check if the PID of the child's PID is stil 
+	}
+
 	/**
 	 * Handle the halt() system call.
 	 */
@@ -576,7 +784,35 @@ public class UserProcess {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
+		
 
+		// Free up memories
+		returnPages();
+		// Close all the files
+		for( int i = 0 ; i < maxOpenFiles ; i ++ ) {
+      if( fileTable[i] != null ) {
+        fileTable[i].close();
+			}
+		}
+
+    // All the children goes to the process's parent
+		Iterator it = childProcesses.entrySet().iterator();
+		while( it.hasNext() ) {
+      Map.Entry pair = (Map.Entry)it.next();
+			if( parentProcess != null ) {
+		  	parentProcess.addChildProcess( (Integer)pair.getKey(), 
+			                               (UserProcess)pair.getValue() );
+			
+			  ((UserProcess)pair.getValue()).setParent( parentProcess );
+			}
+			else {
+        ((UserProcess)pair.getValue()).setParent( null );
+			}
+			childProcesses.remove( pair.getKey() );
+		}
+
+    if( processID == 0 ) Kernel.kernel.terminate();
+    KThread.currentThread().finish();
 		return 0;
 	}
 
@@ -647,12 +883,14 @@ public class UserProcess {
 	 * @return the value to be returned to the user.
 	 */
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
-System.out.println( "syscall is : " + syscall);
+//System.out.println( "syscall is : " + syscall);
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
+		case syscallExec:
+		  return handleExec(a0, a1, a2 );
 		case syscallCreate:
 		  return handleCreat(a0);
 		case syscallOpen:
@@ -726,19 +964,52 @@ System.out.println( "syscall is : " + syscall);
 	private static int fileCount = 0;
 	protected static OpenFile[] fileTable;
 	private int maxLen = 256; // Max bits for the name of a file
+	private static final int sizeOfPtr = 4;
 
 	/** For handling multiprogramming */
 	/**
 	 * request one page from kernel
 	 */
-	private int requestOnePage(){
+	private int requestOnePage(int pagePos){
     int newPage = UserKernel.giveOnePage();
 		if( newPage == -1 ) return -1; // Out of memory
 
 		// Add the new physical page to the process's page table
-		pageTable[numPages] = new TranslationEntry(numPages, newPage,
-		                                           true, false, false );
-		numPages++;
+		pageTable[pagePos] = new TranslationEntry(pagePos, newPage,
+		                                           true, false, false, false );
+		//numPages++;
     return newPage;
+	}
+
+	/**
+	 * Return all the pages back to Kernel
+	 */
+  private int returnPages(){
+    for( int i = 0 ; i < numPages ; i++ ) {
+		  if( pageTable[i] != null )
+        UserKernel.receiveOnePage( pageTable[i].ppn );
+				pageTable[i] = null;
+		}
+		return 0;
+	}
+
+	/** For handling multiprocessing */
+	public int processID;
+	private UserProcess parentProcess;
+	private HashMap<Integer, UserProcess> childProcesses; // Map to store child processes 
+  public int setPID( int itsID ) {
+    processID = itsID;
+		return processID;
+	}
+
+	public void setParent( UserProcess parent ) {
+    parentProcess = parent;
+	}
+	public UserProcess getParent() {
+    return parentProcess;
+	}
+	public int addChildProcess( int id, UserProcess child ) {
+    childProcesses.put( id, child );
+		return id;
 	}
 }

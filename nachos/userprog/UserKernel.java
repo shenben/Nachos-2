@@ -34,12 +34,15 @@ public class UserKernel extends ThreadedKernel {
 		// Initialize freePhyPage if it has not been initialized
 		boolean intStatus = Machine.interrupt().disable();
 		if( freePhyPages == null ) {
-      for( int i = 0 ; i < Machine.processor().getNumPhyPages(); i ++ ) {
+		  freePhyPages = new LinkedList<Integer>();
+      for( int i = 0 ; i < Machine.processor().getNumPhysPages(); i ++ ) {
         // Add each page to the table
-				freePhyPages.add(i);
+				freePhyPages.addFirst(i);
+			//	freePhyPages.add(i);
 			}
 		}
 		if( pageLock == null ) pageLock = new Lock();
+		if( processLock == null ) processLock = new Lock();
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -106,6 +109,8 @@ public class UserKernel extends ThreadedKernel {
 		super.run();
 
 		UserProcess process = UserProcess.newUserProcess();
+		process.setPID( numProcess );
+		increaseProcess();
 
 		String shellProgram = Machine.getShellProgramName();
 		Lib.assertTrue(process.execute(shellProgram, new String[] {}));
@@ -131,9 +136,7 @@ public class UserKernel extends ThreadedKernel {
 	private static Lock pageLock;
 	// Helper functions
   public static int getNumFreePages() {
-	  pageLock.acquire();
     int pageNum = freePhyPages.size();
-		pageLock.release();
 		return pageNum;
 	}
 
@@ -146,10 +149,41 @@ public class UserKernel extends ThreadedKernel {
 	 */
 	public static int giveOnePage() {
 	  pageLock.acquire();
-    if( freePhyPages.size() <= 0 ) return -1;
+    if( freePhyPages.size() <= 0 ){
+		  pageLock.release();
+		  return -1;
+		}
 
 		int availPage = freePhyPages.pop();
     pageLock.release();
 		return availPage;
+	}
+
+	/**
+	 * receiveOnePage()
+	 * @param i - the number of the physical page
+	 * Receives one page that the process gives back
+	 * returns the number of pages returned
+	 * or -1 if an error occured
+	 */
+	public static int receiveOnePage(int i ){
+		if( i < 0 || i >= Machine.processor().getNumPhysPages() ) return -1;
+		pageLock.acquire();
+		freePhyPages.add(i);
+		pageLock.release();
+		return i;
+	}
+
+  /** To handle multiprocess */
+	private static Lock processLock;
+	private static int numProcess = 0;
+	public static int increaseProcess() {
+	  processLock.acquire();
+    numProcess++;
+		processLock.release();
+		return numProcess;
+	}
+	public static int getNumProcess(){
+    return numProcess;
 	}
 }
