@@ -6,6 +6,8 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.io.EOFException;
+import java.util.LinkedList;
+import java.math.BigInteger;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -26,6 +28,8 @@ public class UserProcess {
 	public UserProcess() {
 		numFreePhys = UserKernel.getNumFreePages();
 
+    children = new LinkedList<UserProcess>();
+
     // Initialize 0/1 indices w stdin/stdout
     fileTable = new OpenFile[maxOpenFiles];
     fileTable[0] = UserKernel.console.openForReading();
@@ -36,6 +40,9 @@ public class UserProcess {
    
     // Init PID
     pid = numProcesses++;
+
+    // Track existing processes
+    UserKernel.incNumProc();
 	}
 
 	/**
@@ -109,6 +116,9 @@ public class UserProcess {
 	 */
 	public String readVirtualMemoryString(int vaddr, int maxLength) {
 		Lib.assertTrue(maxLength >= 0);
+    if (vaddr <= 0 || vaddr >= (numPages * pageSize)
+        || (vaddr + maxLength) >= (numPages * pageSize))
+      return null;
 
 		byte[] bytes = new byte[maxLength + 1];
 
@@ -155,10 +165,12 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-    if (vaddr < 0 || vaddr >= (numPages * pageSize))
+    if (vaddr <= 0 || vaddr >= (numPages * pageSize) 
+        || (vaddr + offset + length) >= (numPages * pageSize))
 			return -1;
 
-		int amount = Math.min(length, memory.length - vaddr);
+		//int amount = Math.min(length, memory.length - vaddr);
+		int amount = Math.min(length, (numPages * pageSize) - vaddr);
 		System.arraycopy(memory, vaddr, data, offset, amount);
 
 		return amount;
@@ -197,10 +209,12 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		// for now, just assume that virtual addresses equal physical addresses
-    if (vaddr < 0 || vaddr >= (numPages * pageSize))
+    if (vaddr <= 0 || vaddr >= (numPages * pageSize) 
+        || (vaddr + offset + length) >= (numPages * pageSize))
 			return -1;
 
-		int amount = Math.min(length, memory.length - vaddr);
+		//int amount = Math.min(length, memory.length - vaddr);
+		int amount = Math.min(length, (numPages * pageSize) - vaddr);
 		System.arraycopy(data, offset, memory, vaddr, amount);
 
 		return amount;
@@ -306,6 +320,7 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+
     System.out.println("this PID = " + pid);
     System.out.println("Num free pages starting: " + UserKernel.getNumFreePages());
 
@@ -337,8 +352,9 @@ public class UserProcess {
 
 		for (int i = prevSectionLength; i < numPages; i++) {
       int ppn = UserKernel.allocPage();
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+			pageTable[i] = new TranslationEntry(i, ppn, true, false, false, false);
     }
+
     System.out.println("Num free pages left: " + UserKernel.getNumFreePages());
 
 		return true;
@@ -348,6 +364,16 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+    System.out.println("deallocating pages for PID: " + pid);
+    for (int i = 0; i < numPages; i++) {
+      int ppn = pageTable[i].ppn;
+      int check = UserKernel.deallocPage(ppn);
+      if ( check == -1 ) {
+        System.out.println("error deallocating page " + ppn);
+        return;
+      }
+    }
+    return;
 	}
 
 	/**
@@ -394,17 +420,107 @@ public class UserProcess {
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
 
-		return 0;
+    System.out.println("status: " + status);
+
+    // close files
+    for (int i = 0; i < maxOpenFiles; i++) {
+      OpenFile of = fileTable[i];
+      if ( of == null ) continue;
+      of.close();
+      fileTable[i] = null;
+    }
+
+    // All children of this process no longer have parent
+    int numChildren = children.size();
+    for (int i = 0; i < numChildren; i++) {
+      UserProcess c = children.get(i);
+      c.setParent(null);
+    }
+
+    unloadSections();
+
+    UserKernel.decNumProc();
+
+    coff.close();
+
+    // TODO write to parent status + wake up (if called join)
+
+    // set status to 0 TODO check
+    // ONLY IF EXITING NORMALLY TODO
+    byte[] data = new byte[1];
+    data[0] = '0';
+    writeVirtualMemory( status, data, 0, 1 );
+
+    if ( UserKernel.getNumProc() == 0 ) {
+      Kernel.kernel.terminate();
+    } else {
+      KThread.currentThread().finish();
+    }
+
+		return status;
 	}
+
+  /**
+   * Handle the exec() system call.
+   */
+  private int handleExec(int faddr, int argc, int aaddr) {
+    if ((argc < 0) || ((argc > 0) && (aaddr == 0)) 
+        || aaddr < 0 || aaddr > (numPages * pageSize)
+        || faddr <= 0 || faddr > (numPages * pageSize) ) //TODO makes sense for files?
+      return -1;
+    
+    System.out.println("argc = " + argc);
+
+    String filename = readVirtualMemoryString( faddr, maxLen );
+    if ( filename == null || !filename.endsWith(".coff") ) 
+      return -1;
+    
+    System.out.println("filename = " + filename);
+
+    // Argument passing
+    String[] args = new String[argc];
+    byte[] buffer = new byte[4];
+    for (int i = 0, s = 0; i < (argc * 4); i += 4, s++) {
+      int check = readVirtualMemory( aaddr + i, buffer, 0, 4 );
+      if ( check == -1 || check != 4 ) {
+        System.out.println("check = " + check);
+        return -1;
+      }
+      int argptr = new BigInteger(buffer).intValue();
+      String arg = readVirtualMemoryString( argptr, maxLen );
+      if ( arg == null ) return -1;
+      args[s] = arg;
+      System.out.println("argv[" + i + "] = " + arg);
+    }
+
+    UserProcess child = newUserProcess();
+    child.setParent(this);
+    children.add(child);
+		Lib.assertTrue(child.execute( filename, args ));
+
+    return child.getPID();
+  }
+
+  /**
+   * Handle the join() system call.
+   */
+  private int handleJoin(int pid, int saddr) {
+    if ( pid < 0 || pid >= numProcesses 
+        || saddr <= 0 || saddr > (numPages * pageSize) )
+      return -1;
+    return -1;
+  }
 
   /**
    * Handle the creat() system call.
    */
   private int handleCreate(int nameaddr) { 
+    if ( nameaddr <= 0 || nameaddr > (numPages * pageSize) ) return -1;
+
     String name = readVirtualMemoryString( nameaddr, maxLen );
     if ( name == null ) return -1;
 
-    OpenFile of = ThreadedKernel.fileSystem.open(name, true);
+    OpenFile of = ThreadedKernel.fileSystem.open(name, true); //TODO true/false correct?
     if ( of == null ) return -1;
 
     if ( fileCount >= maxOpenFiles ) {
@@ -430,6 +546,8 @@ public class UserProcess {
    * Handle the open() system call.
    */
   private int handleOpen(int nameaddr) {
+    if ( nameaddr <= 0 || nameaddr > (numPages * pageSize) ) return -1;
+
     String name = readVirtualMemoryString( nameaddr, maxLen );
     if ( name == null ) return -1;
 
@@ -459,7 +577,9 @@ public class UserProcess {
    * Handle the read() system call.
    */
   private int handleRead(int fd, int bufaddr, int count) {
-    if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
+    if ( fd < 0 || fd >= maxOpenFiles || count < 0 
+        || bufaddr <= 0 || bufaddr > (numPages * pageSize) )
+      return -1;
 
     byte[] buffer = new byte[pageSize];
 
@@ -491,7 +611,9 @@ public class UserProcess {
    * Handle the write() system call.
    */
   private int handleWrite(int fd, int bufaddr, int count) {
-    if ( fd < 0 || fd >= maxOpenFiles || count < 0 ) return -1;
+    if ( fd < 0 || fd >= maxOpenFiles || count < 0 
+        || bufaddr <= 0 || bufaddr > (numPages * pageSize) )
+      return -1;
 
     byte[] buffer = new byte[pageSize];
 
@@ -542,6 +664,8 @@ public class UserProcess {
    * Handle the unlink() system call.
    */
   private int handleUnlink(int nameaddr) {
+    if ( nameaddr <= 0 || nameaddr > (numPages * pageSize) ) return -1;
+
     String name = readVirtualMemoryString( nameaddr, maxLen );
     if ( name == null ) return -1;
 
@@ -622,6 +746,10 @@ public class UserProcess {
 			return handleHalt();
 		case syscallExit:
 			return handleExit(a0);
+    case syscallExec:
+      return handleExec(a0, a1, a2);
+    case syscallJoin:
+      return handleJoin(a0, a1);
     case syscallCreate:
       return handleCreate(a0);
     case syscallOpen:
@@ -662,13 +790,37 @@ public class UserProcess {
 			processor.writeRegister(Processor.regV0, result);
 			processor.advancePC();
 			break;
+    case Processor.exceptionPageFault:
+    case Processor.exceptionTLBMiss:
+    case Processor.exceptionReadOnly:
+    case Processor.exceptionBusError:
+    case Processor.exceptionAddressError:
+    case Processor.exceptionOverflow:
+    case Processor.exceptionIllegalInstruction:
+      System.out.println("EXCEPTION: " + cause);
+      // TODO notify parent
+      handleExit(0);
+      break;
 
 		default:
+			System.out.println("Unexpected exception: "
+					+ Processor.exceptionNames[cause]);
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
 		}
 	}
+
+  /**
+   * Accessor for other PIDs
+   */
+  public int getPID() {
+    return pid;
+  }
+
+  public void setParent(UserProcess p) {
+    parent = p;
+  }
 
 	/** The program being run by this process. */
 	protected Coff coff;
@@ -705,6 +857,11 @@ public class UserProcess {
 
   /** PID of this process vars */
   private int pid;
+
+  private UserProcess parent = null;
   
   private static int numProcesses = 0;
+
+  /** Track children of this process */
+  private LinkedList<UserProcess> children;
 }

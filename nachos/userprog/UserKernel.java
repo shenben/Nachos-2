@@ -127,7 +127,7 @@ public class UserKernel extends ThreadedKernel {
   }
 
   /**
-   * Mutator for allocating pages. TODO use CV???
+   * Mutator for allocating pages. 
    */
   public static int allocPage() {
     lock.acquire();
@@ -160,6 +160,18 @@ public class UserKernel extends ThreadedKernel {
     return ppn;
   }
 
+  public static void incNumProc() {
+    numProcesses++;
+  }
+
+  public static void decNumProc() {
+    numProcesses--;
+  }
+
+  public static int getNumProc() {
+    return numProcesses;
+  }
+
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 
@@ -175,4 +187,7 @@ public class UserKernel extends ThreadedKernel {
 
   /** Sync primitives for accessing freePages. */
   private static Lock lock;
+
+  /** Track number of existing processes. */
+  private static int numProcesses = 0;
 }
