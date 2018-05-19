@@ -3,6 +3,7 @@ package nachos.userprog;
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
+import java.util.*;
 
 /**
  * A kernel that can support multiple user processes.
@@ -29,6 +30,20 @@ public class UserKernel extends ThreadedKernel {
 				exceptionHandler();
 			}
 		});
+
+		// Initialize freePhyPage if it has not been initialized
+		boolean intStatus = Machine.interrupt().disable();
+		if( freePhyPages == null ) {
+		  freePhyPages = new LinkedList<Integer>();
+      for( int i = 0 ; i < Machine.processor().getNumPhysPages(); i ++ ) {
+        // Add each page to the table
+				freePhyPages.addFirst(i);
+			//	freePhyPages.add(i);
+			}
+		}
+		if( pageLock == null ) pageLock = new Lock();
+		if( processLock == null ) processLock = new Lock();
+		Machine.interrupt().restore(intStatus);
 	}
 
 	/**
@@ -94,6 +109,9 @@ public class UserKernel extends ThreadedKernel {
 		super.run();
 
 		UserProcess process = UserProcess.newUserProcess();
+		process.setPID( numProcess );
+		increaseProcess();
+		ROOT = process;
 
 		String shellProgram = Machine.getShellProgramName();
 		Lib.assertTrue(process.execute(shellProgram, new String[] {}));
@@ -113,4 +131,63 @@ public class UserKernel extends ThreadedKernel {
 
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
+
+  /** To keep track of how many free pages there are */
+	private static LinkedList<Integer> freePhyPages;
+	private static Lock pageLock;
+	// Helper functions
+  public static int getNumFreePages() {
+    int pageNum = freePhyPages.size();
+		return pageNum;
+	}
+
+	/**
+	 * giveOnePage() 
+	 * Gives out one more page
+	 *
+	 * returns the page number
+	 * or -1 if error occurs
+	 */
+	public static int giveOnePage() {
+	  pageLock.acquire();
+    if( freePhyPages.size() <= 0 ){
+		  pageLock.release();
+		  return -1;
+		}
+
+		int availPage = freePhyPages.pop();
+    pageLock.release();
+		return availPage;
+	}
+
+	/**
+	 * receiveOnePage()
+	 * @param i - the number of the physical page
+	 * Receives one page that the process gives back
+	 * returns the number of pages returned
+	 * or -1 if an error occured
+	 */
+	public static int receiveOnePage(int i ){
+		if( i < 0 || i >= Machine.processor().getNumPhysPages() ) return -1;
+		pageLock.acquire();
+		freePhyPages.add(i);
+		pageLock.release();
+//System.out.println( "In kernel we have " + freePhyPages.size() + " left from "
+  //                     + Machine.processor().getNumPhysPages() + " total pages");
+		return i;
+	}
+
+  /** To handle multiprocess */
+	private static Lock processLock;
+	private static int numProcess = 0;
+	public static UserProcess ROOT;
+	public static int increaseProcess() {
+	  processLock.acquire();
+    numProcess++;
+		processLock.release();
+		return numProcess;
+	}
+	public static int getNumProcess(){
+    return numProcess;
+	}
 }

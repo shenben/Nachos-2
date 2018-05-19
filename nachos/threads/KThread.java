@@ -153,7 +153,7 @@ public class KThread {
 
 		Lib.debug(dbgThread, "Forking thread: " + toString() + " Runnable: "
 				+ target);
-    System.out.println("Forking thread: " + toString());
+   // System.out.println("Forking thread: " + toString());
 		boolean intStatus = Machine.interrupt().disable();
 
 		tcb.start(new Runnable() {
@@ -196,7 +196,7 @@ public class KThread {
 	public static void finish() {
 		Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
 
-System.out.println( " in finish by thread " + currentThread.toString());
+//System.out.println( " in finish by thread " + currentThread.toString());
 		Machine.interrupt().disable();
 
 		Machine.autoGrader().finishingCurrentThread();
