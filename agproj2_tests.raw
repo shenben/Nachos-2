@@ -1,0 +1,244 @@
+------[ Sat May 19 12:20:38 2018 ]------
+--[ Test write1.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+
+roses are red
+violets are blue
+I love Nachos
+and so do you
+
+
+success
+
+--[ Test write4.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+Test: Sending string "<3 nachos!
+.
+" to stdin.
+
+-> <3 nachos!
+-> 
+success
+
+--[ Test write10.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+creating write.out...
+...passed (fd = 2)
+writing 59 bytes to file, 59 bytes at a time...
+...passed (wrote 59 bytes)
+closing 2...
+opening write.out...
+...passed (fd = 2)
+reading write.out into buffer...
+...success
+validating write.out...
+...passed
+closing 2...
+creating write.out...
+...passed (fd = 2)
+writing 59 bytes to file, 8 bytes at a time...
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 8 bytes)
+...passed (wrote 3 bytes)
+closing 2...
+opening write.out...
+...passed (fd = 2)
+reading write.out into buffer...
+...success
+validating write.out...
+...passed
+closing 2...
+creating write.out...
+...passed (fd = 2)
+writing 59 bytes to file, 1 bytes at a time...
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+...passed (wrote 1 bytes)
+closing 2...
+opening write.out...
+...passed (fd = 2)
+reading write.out into buffer...
+...success
+validating write.out...
+...passed
+closing 2...
+creating binary.out...
+...passed (fd = 2)
+writing 4096 bytes to file, 4096 bytes at a time...
+...passed (wrote 4096 bytes)
+closing 2...
+opening binary.out...
+...passed (fd = 2)
+reading binary.out into buffer...
+...success
+validating binary.out...
+...passed
+closing 2...
+creating binary.out...
+...passed (fd = 2)
+writing 4096 bytes to file, 128 bytes at a time...
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+...passed (wrote 128 bytes)
+closing 2...
+opening binary.out...
+...passed (fd = 2)
+reading binary.out into buffer...
+...success
+validating binary.out...
+...passed
+closing 2...
+writing to an invalid fd (-10)...
+...passed (r = -1)
+writing to an invalid fd (256)...
+...passed (r = -1)
+writing to an unopened fd (8)...
+...passed (r = -1)
+creating bad.out...
+...passed (fd = 2)
+writing count = 0 bytes...
+...passed
+writing with an invalid buffer (should not crash, only return an error)...
+...passed (r = -1)
+writing with an invalid count (should not crash, only return an error)...
+...passed (r = -1)
+writing with a buffer that extends beyond the end of the
+address space.  write should return an error.
+...passed (r = -1)
+
+success
+
+--[ Test exec1.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+ParentChildGrader: Parent exited with status 2
+Machine halting!
+
+Ticks: total 17960, kernel 17940, user 20
+Disk I/O: reads 0, writes 0
+Console I/O: reads 0, writes 0
+Paging: page faults 0, TLB misses 0
+Swap: COFF reads 0, swap reads 0, swap writes 0
+Network I/O: received 0, sent 0
+
+--[ Test join1.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-check grader
+execing exit1.coff...
+...passed
+joining 2...
+ChildPID : 2
+child exited with 123
+...child exited with unhandled exception
+
+nachos.machine.AssertionFailureError: ParentChildGrader: expected parent status of 0, but parent actually exited with -1
+	at nachos.machine.Lib.assertTrue(Lib.java:89)
+	at nachos.ag.UCSDParentChildGrader.exitCalled(UCSDParentChildGrader.java:59)
+	at nachos.ag.UCSDParentChildGrader.finishingCurrentProcess(UCSDParentChildGrader.java:49)
+	at nachos.userprog.UserProcess.handleExit(UserProcess.java:808)
+	at nachos.userprog.UserProcess.handleSyscall(UserProcess.java:917)
+	at nachos.userprog.UserProcess.handleException(UserProcess.java:954)
+	at nachos.userprog.UserKernel.exceptionHandler(UserKernel.java:98)
+	at nachos.userprog.UserKernel$1.run(UserKernel.java:30)
+	at nachos.machine.Processor$MipsException.handle(Processor.java:619)
+	at nachos.machine.Processor.run(Processor.java:101)
+	at nachos.userprog.UThread.runProgram(UThread.java:31)
+	at nachos.userprog.UThread.access$000(UThread.java:11)
+	at nachos.userprog.UThread$1.run(UThread.java:20)
+	at nachos.threads.KThread.runThread(KThread.java:172)
+	at nachos.threads.KThread.access$000(KThread.java:43)
+	at nachos.threads.KThread$1.run(KThread.java:161)
+	at nachos.machine.TCB.threadroot(TCB.java:246)
+	at nachos.machine.TCB.access$100(TCB.java:25)
+	at nachos.machine.TCB$1.run(TCB.java:99)
+	at java.lang.Thread.run(Thread.java:748)
+
+
