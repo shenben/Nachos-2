@@ -792,6 +792,7 @@ System.out.println( "child exited with " + childExitStat );
 
 		if( writeVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
 		    != sizeOfPtr ) return -1;
+		else if( childProcess.exitAbnormal ) return 0;
 		else return 1;
 	//	if( childExitStat != 1 ) return 0;
     //else return 1;
@@ -962,10 +963,6 @@ System.out.println( "child exited with " + childExitStat );
 					processor.readRegister(Processor.regA3));
 			processor.writeRegister(Processor.regV0, result);
 
-			// Write the result to the parent's record
-		//	if( parentProcess != null ) {
-     //   parentProcess.addChildExitStatus( this.processID, result );
-		//	}
 			processor.advancePC();
 			break;
 
@@ -974,6 +971,7 @@ System.out.println( "child exited with " + childExitStat );
 			//if( parentProcess != null ) {
         //parentProcess.addChildExitStatus( this.processID, cause );
 			//}
+      exitAbnormal = true;
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
@@ -1045,6 +1043,7 @@ System.out.println( "child exited with " + childExitStat );
 	// Map to store child processes's exit statues
 	private HashMap<Integer, Integer> childExits; 
 	public boolean exited = false;
+	public boolean exitAbnormal = false;
   public KThread parentThread = null;
 	public int setPID( int itsID ) {
     processID = itsID;
