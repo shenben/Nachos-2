@@ -1,42 +1,32 @@
-/*
- * join1.c
- *
- * Simple program for testing join.  After exec-ing the child, it
- * waits for the child to exit.
- *
- * Geoff Voelker
- * 11/9/15
- */
-
+#include "stdio.h"
 #include "syscall.h"
 
-int
-main (int argc, char *argv[])
-{
-    char *prog = "exit1.coff";
-    int pid, r, status = 0;
-
-    printf ("execing %s...\n", prog);
-    pid = exec (prog, 0, 0);
-    if (pid > 0) {
-	printf ("...passed\n");
+int main() {
+ int fd[32];
+  int i;
+  char buffer[128];
+  char * str = "ROSES ARE RED\n";
+  for (i = 2; i < 30; i += 2) {
+    fd[i] = creat("somefile.c");
+    if ( fd[i] < 0 ) {
+      printf("... failed (fd[i] = %d)\n", fd[i]);
     } else {
-	printf ("...failed (pid = %d)\n", pid); 
-	exit (-1);
+      printf("... passed\n");
     }
-
-    printf ("joining %d...\n", pid);
-    r = join (pid, &status);
-    if (r > 0) {
-	printf ("...passed (status from child = %d)\n", status);
-    } else if (r == 0) {
-	printf ("...child exited with unhandled exception\n");
-	exit (-1);
+    close(fd[i]);
+    int invalidRead = read(fd[i], buffer, 0);
+    int invalidWrite = write(fd[i], str, 20);
+    if ( (invalidRead != -1) || (invalidWrite != -1) ) {
+      printf("... failed - read/write to closed file should fail\n");
     } else {
-	printf ("...failed (r = %d)\n", r);
-	exit (-1);
+      printf("... passed r/w to closed file\n");
     }
-
-    // the return value from main is used as the status to exit
-    return 0;
+    fd[i+1] = creat("somefile2.c");
+    if ( fd[i+1] != fd[i] ) {
+      printf("... failed (fd[i+1] = %d)\n", fd[i+1]);
+    } else {
+      printf("... passed\n");
+    }
+  }
+  return 0;
 }

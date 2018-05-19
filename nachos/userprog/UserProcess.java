@@ -37,6 +37,7 @@ public class UserProcess {
 
 			childProcesses = new HashMap<Integer, UserProcess>();
 			childExits = new HashMap<Integer, Integer>();
+			childLock = new Lock();
 	}
 
 	/**
@@ -746,7 +747,7 @@ public class UserProcess {
 
 		UserProcess childProcess = UserProcess.newUserProcess();
 		if( childProcess == null ) return -1;
-		int id = UserKernel.increaseProcess() - 1;
+		int id = UserKernel.increaseProcess();
 		childProcess.setPID( id );
 		childProcess.setParent( this );
 		this.addChildProcess( id, childProcess );
@@ -760,15 +761,16 @@ public class UserProcess {
 	 */
 	private int handleJoin(int childPID, int statusAddr) {
     // First check if the PID of the child's PID is still a child
-		if( !childProcesses.containsKey( childPID ) ) return -1;
+		if( !childProcesses.containsKey( childPID ) || statusAddr < 0 ) return -1;
+System.out.println( "ChildPID : " + childPID );
 		UserProcess childProcess = childProcesses.get( childPID );
 
     childProcess.currentThread.join();
     // Resume and disown the child, check the exit status
-		if( !childExits.containsKey( childPID ) || 
-		    childExits.get(childPID) == 0 ) return 1;
+		if( !childExits.containsKey( childPID ) ) return 1;
 
 		int childExitStat = childExits.get( childPID );
+System.out.println( "child exited with " + childExitStat );
     byte childExitBytes[] = new byte[sizeOfPtr];
 		// Write that value to the address
 		// Get the method from 
@@ -780,6 +782,7 @@ public class UserProcess {
 
 		if( writeVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
 		    != sizeOfPtr ) return -1;
+		else if( childExitStat == 0 ) return 1;
 		else return 0;
 	//	if( childExitStat != 1 ) return 0;
     //else return 1;
@@ -818,6 +821,7 @@ public class UserProcess {
 			}
 		}
 
+    if( processID == 0 ) Kernel.kernel.terminate();
     // All the children goes to the root process
 		Iterator it = childProcesses.entrySet().iterator();
 		while( it.hasNext() ) {
@@ -826,13 +830,12 @@ public class UserProcess {
 			                               (UserProcess)pair.getValue() );
 			
 			((UserProcess)pair.getValue()).setParent( UserKernel.ROOT );
-			childProcesses.remove( pair.getKey() );
+			//childProcesses.remove( pair.getKey() );
 		}
 
-    if( processID == 0 ) Kernel.kernel.terminate();
-		else if( parentProcess != null ) {
+		if( parentProcess != null ) {
 		  parentProcess.addChildExitStatus( this.processID, status );
-		  parentProcess.deleteChildProcess( this.processID );
+		 // parentProcess.deleteChildProcess( this.processID );
 		}
 //System.out.println( "Finishing PID " + this.processID + " with exitstatus " + status);
       KThread.currentThread().finish();
@@ -1033,7 +1036,8 @@ public class UserProcess {
 	/** For handling multiprocessing */
 	public int processID;
 	private UserProcess parentProcess;
-	private HashMap<Integer, UserProcess> childProcesses; 
+	private HashMap<Integer, UserProcess> childProcesses;
+	private Lock childLock;
 	// Map to store child processes's exit statues
 	private HashMap<Integer, Integer> childExits; 
 	public boolean parentJoined = false;

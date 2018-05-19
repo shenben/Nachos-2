@@ -13,7 +13,7 @@ int testExit(){
 	for( i = 0 ; i < 10 ; i++ ) {
     printf( "%d's loop\n", i );
 		if( i == 8 ){
-      exit( 1 );
+      exit( 0 );
 		}
 	}
 	printf( "You should not see this\n" );
@@ -23,7 +23,7 @@ int testExit(){
 int
 main (int argc, char *argv[])
 {
-   // testExit();
-	 exit(123);
+   testExit();
+	 exit(0);
 		//halt();
 }
