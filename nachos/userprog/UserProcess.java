@@ -479,6 +479,7 @@ public class UserProcess {
 			for( int i = 0 ; i < section.getLength() ; i++ ) {
         int vpn = section.getFirstVPN() + i;
 				section.loadPage(i, pageTable[vpn].ppn);
+				if( section.isReadOnly()) pageTable[vpn].readOnly = true;
 			}
 		}
 
@@ -717,7 +718,9 @@ public class UserProcess {
 		if( !extension.equals( extCoff )) return -1;
 
     // Try open the file. If the file is not openable, then return -1
-    if( ThreadedKernel.fileSystem.open( fileName, false) == null ) return -1;
+
+    //if( ThreadedKernel.fileSystem.open( fileName, false) == null ) return -1;
+
 
 		// Get all the args
 		byte ptr[] = new byte[sizeOfPtr];
@@ -742,6 +745,7 @@ public class UserProcess {
 		}
 
 		UserProcess childProcess = UserProcess.newUserProcess();
+		if( childProcess == null ) return -1;
 		int id = UserKernel.increaseProcess() - 1;
 		childProcess.setPID( id );
 		childProcess.setParent( this );

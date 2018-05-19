@@ -1,0 +1,144 @@
+/*
+ * Filename: README
+ * 
+ * General description of this project
+ /
+
+Group Members:
+_________________
+
+Yue Zhu, PID A92020065, cse120scu
+Natali Popescu, PID, cse120
+
+Code Description:
+_________________
+
+  Syscall:
+	__________
+
+	We implemented this part in a way that handSyscall() function calls the 
+	corresponding syscall handler with the passed in arguments.
+
+	  handleCreat( int nameaddr );
+		function that handles the creat() syscall. It reads the file name string from
+		virtual memory by using readVirtualmemoryString(). If a file with the read 
+		name exists, then it let file system open the file and record the file 
+		descriptor in the process' file table. If it does not exist, it creates an 
+		empty file with that file name, opens it, and records the file descriptor.
+		Error Condition: too many files open, filename invalid, file system fail to
+		                 open/create the file
+		Test: error tests, create multiple files with different names, creat
+		      multiple files with the same name but different descriptor
+    
+		handleOpen( int nameaddr );
+		funcion that handles open() syscall. Same as handleCreat(), except if the 
+		file with the given name does not exist, it returns -1 to indicate an error.
+		Test: same as handleCreat() except open file that does not exist should 
+		      return an error
+
+		handleRead( int fileDescriptor, int bufaddr, int count );
+		function that handles the read() syscall. It opens the file specified with 
+		the descriptor, writes as many bytes as possible up to the number of bytes 
+		specified in argument to the container program passed in, using 
+		writeVirtualMemory().
+		Error Condition: invalid file descriptor, negative number of bytes to read,
+		                 writeVirtualMemory failure, read failure
+		Test: see handleWrite() tests
+
+		handlWrite( int fileDescriptor, int buffaddr, int count );
+		function that handles write() syscall, except instead of reading from a
+		file to container, it first reads as mnay bytes as possible up to count bytes
+		from the file into a intermediate buffer using readVirtualMemory; then it 
+		writes as many bytes as possible up to the number of bytes read from the 
+		intermediate buffer to the container program passed in, using
+		writeVirtualMemory().
+		Error Condition: invalid file descriptor, negative number of bytes to read,
+		                 failing to read from or write to virtual
+		Test (combined read and write): error tests.
+		                                read from stdin and write to stdio.
+																		write small number of bytes from file, and 
+																		write to another file.
+																		read large file and write to another file.
+																		write 0 bytes
+																		write10.c
+
+    handleClose( int fileDescriptor );
+		function that handles close() syscall. It let file system close the file,
+		free the fileDescriptor to reuse in the future, and set the file table
+		entry to null to indicate the file is closed.
+		Error Condition: invalid file descritor, the file descriptor passed in points
+		                 to a closed / does not exist file
+		Test: error tests. Open a bunch of files, close the first one and open 
+		      another file, the newest one should have the descriptor of the closed 
+					one. Write to or read from closed file results an error.
+
+		handleUnlink( int nameaddr );
+		function that handles unlink() syscall. It reads the file name string from
+		virtual memory, and deltes the file suing file system.
+		Error Condition: no file open, fail to read the file name, file system
+		                 returns an error when closing the file.
+	  Test: error checks. Create a file, writes to it, read it out to stdout, and 
+		      unlink the file. The file should not be present in file system.
+
+  
+	MultiProgramming:
+	________________
+
+	We created in a static linked list of integers (page numbers) to keep track which
+	physical pages are free to use in UserKernel. UserKernel also has a helper 
+	function that pops a page number off and return it, as allocating the physical
+	page to a process. This helper function is called by a process to request
+	physical memories, one page at a time, and the process will map each physical
+	page it received to consecutive virtual pages and stores the translation in 
+	its pageTable that's unique to each process.
+	When reading from and writing to virtual memories, the process breaks the 
+	number of bytes into three parts: the head part that begins on the middle of one
+	page, the body part that takes of whole number of pages, and the tail part that
+	ends on the middle of one page. It reads each part by translating the virtual
+	page number to physical page number and thus virtual address to physical
+	address. Process one page at a time.
+	Test: used syscall tests to test this part.
+
+	MultiProcessing:
+	_______________
+
+	handleExec(int fileNameAddr, int argc, int argvAddr ):
+	function that handles exec() system call. It first reads the file name string,
+	and check if it is a valid executable file. Then it reads the pointers to the
+	arguments string by reading four bytes at a time starting from argvAddr, for
+	argc times. I cited the code from stackoverflow to convert four bytes read into
+	an int (pointer value), and then read a string from that value and stored it 
+	into a string array. Finally the process starts a new process, assign its
+	PID and parentProcess, and execute it with the executable file name and the 
+	string array we read.
+	Error conditions: file name invalid, argc is less than 0, argvAddr is not a 
+	                  valid address, read from virtual memory failure
+  Tests: error checks, exec cp.coff and checked the copied file, exec cp.coff
+	       multiple times and check the child pid
+	
+	handleJoin( int childPID, int statusAddr );
+	function that handles join() syscall. It calls join on child's main thread,
+	writes the child's exit status to the virtual address of statusAddr.
+	Error conditions: childPID is not actually a child, fail to write the exit
+	                  status
+	Tests: error checks, invoke join on multiple child processes
+
+	handleExit( int status );
+	function that handles exit() syscall. It returns all the physical pages
+	allocated, closes all the files, and assigns orphan child processes to be the 
+	children of root process. If the current process is not kernel, finish the
+	process, otherwise terminate the kernel.
+	Test: call exit in the middle of the loop and check the number of free physical
+	pages.
+
+How well it worked:
+___________________
+
+We hope it works? It passes the tests provided and we wrote, but we are almost
+certain that we missed some test cases.
+
+Contribution:
+_____________
+
+We each wrote our own code first and discussed details together. It is to make
+sure that both of us knows thoroughly how things work.
