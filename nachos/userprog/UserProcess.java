@@ -587,13 +587,27 @@ public class UserProcess {
     System.out.println("filename = " + filename);
 
     // Argument passing
+    byte buff[] = new byte[4];
+    int argvptr;
     String[] args = new String[argc];
     for (int i = 0, s = 0; i < (argc * 4); i += 4, s++) {
-      String arg = readVirtualMemoryString( aaddr + 1, maxLen );
+      int check = readVirtualMemory(aaddr + i, buff, 0, 4);
+      if ( check != 4 || check == -1 ) return -1;
+
+      argvptr = (buff[3] << 24) & 0xff000000 |
+                (buff[2] << 16) & 0x00ff0000 |
+                (buff[1] << 8)  & 0x0000ff00 |
+                (buff[0] << 0)  & 0x000000ff;
+
+      if (argvptr < 0 || argvptr > (numPages * pageSize)) return -1;
+
+      String arg = readVirtualMemoryString( argvptr, maxLen );
       if ( arg == null ) {
         System.out.println("arg is null");
         return -1;
       }
+      System.out.println("argvptr: " + argvptr);
+      System.out.println("arg: " + arg);
       args[s] = arg;
     }
 
@@ -613,12 +627,18 @@ public class UserProcess {
         || saddr <= 0 || saddr > (numPages * pageSize) )
       return -1;
 
+    UserProcess child = null;
     for (int i = 0; i < children.size(); i++) {
       // pid matches one of children
-      if (pid == children.get(i).getPID()) break;
+      if (pid == children.get(i).getPID()) {
+        child = children.get(i);
+        break;
+      }
       // iterated through all children without match
       if (i == (children.size() - 1)) return -1;
     }
+
+    if (child == null) return -1;
 
     // suspend execution of current process
     // if child already executed by time of call: ret immediately
@@ -626,6 +646,9 @@ public class UserProcess {
     //
     // child exit normally: ret 1 + transfer exit status to parent
     // child exit abnorm: ret 0 + don't need to set status bit
+
+    System.out.println("Child PID = " + child.getPID());
+    //child.currentThread.join();
 
     return -1;
   }

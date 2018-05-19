@@ -11,8 +11,8 @@ int main(int argc, char * argv[]) {
   char *prog = "pa.coff";
   int pid;
   char *args[2] = {
-    "this should print first",
-    "this should print next",
+    "hello",
+    "world",
   };
   pid = exec(prog, 2, args);
   if (pid < 0) {

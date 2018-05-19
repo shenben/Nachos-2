@@ -8,7 +8,7 @@
 #include "stdio.h"
 
 int main(int argc, char * argv[]) {
-  if (argc != 2) {
+  if (strncmp(argv[0], "hello", 6) != 0 || strncmp(argv[1], "world", 6) != 0) {
     printf("\tPA FAILED\n");
     exit(-1);
   } else {
