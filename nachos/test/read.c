@@ -9,7 +9,12 @@
 
 int testReadOneLine() {
   char buf[30];
-	read( open("thisIsNotDrill"), buf, 15);
+	int ret = read( open("thisIsNotDrill"), buf, 15);
+  if ( ret == -1 ) printf ( "Error has occured, %d \n ", ret );
+	else printf( "Success. Read: %s", buf );
+}
+
+int testReadLargeFile() {
   
 }
 

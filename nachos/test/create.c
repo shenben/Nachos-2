@@ -18,12 +18,22 @@ int testCreateOldFile() {
   creat( "thisIsNotADrill");
 }
 
+int testTooManyFiles() {
+  int i;
+	for( i = 0 ; i < 15 ; i++ ) {
+	  int ret = creat( "tset" );
+    if( ret != -1 ) 
+		  printf( "Created file names %d", ret );
+		else 
+		  printf( "Too many files at i = %d", ret );
+	}
+}
+
 int main() {
-  //printf( "\nTesting create() syscall...\n");
+  printf( "\nTesting create() syscall...\n");
 
-	testCreateNewFile();
-	testCreateOldFile();
-
+	//testCreateNewFile();
+	//testCreateOldFile();
+  testTooManyFiles();
   halt();
- // printf( "\nFinished testing create syscall.\n" );
 }

@@ -27,13 +27,6 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-	//	int numPhysPages = Machine.processor().getNumPhysPages();
-//		numPages = 0;
-	//	pageTable = new TranslationEntry[numPhysPages];
-
-    // Only gets a page when you need one
-		/*for (int i = 0; i < numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i, i, true, false, false, false);*/
 
 			fileTable = new OpenFile[maxOpenFiles];
 			// 0 must for standard reading
@@ -43,7 +36,7 @@ public class UserProcess {
 			fileCount++;
 
 			childProcesses = new HashMap<Integer, UserProcess>();
-		  currentThread = KThread.currentThread();
+			childExits = new HashMap<Integer, Integer>();
 	}
 
 	/**
@@ -82,7 +75,10 @@ public class UserProcess {
 		if (!load(name, args))
 			return false;
 
-		new UThread(this).setName(name).fork();
+   // currentThread = KThread.currentThread();
+	  //new UThread(this).setName(name).fork();
+		currentThread = new UThread(this).setName(name);
+		currentThread.fork();
 
 		return true;
 	}
@@ -302,7 +298,6 @@ public class UserProcess {
 		else {
 		  // The first part
       System.arraycopy(data, offset, memory, paddr, firstPageLeft );
-//System.out.println( "First page " + vPageBegin + " has " + firstPageLeft + " left." );
 			pageTable[vPageBegin].used = true;
 			pageTable[vPageBegin].dirty = true;
 
@@ -311,14 +306,7 @@ public class UserProcess {
 			offset += (firstPageLeft);
 			int pageRead = vPageBegin + 1;
 			if( pageRead >= numPages || offset > length ) return remainBytes;
-//System.out.println( "\n Now we are on page " + pageRead
-//                     + " and physical page " + pageTable[pageRead].ppn
-//                     + " reading " + remainBytes + " bytes." );
-//System.out.println( "The offset is " + offset + " and we have " + data.length + 
-//                    " and the last byte we are supposed to copy is " + 
-//                     data[767] );
 			while( remainBytes > pageSize ) {
-//System.out.println( "\n You should not see this message. " );
 				// Error
 				if( pageTable[pageRead] == null || pageTable[pageRead].readOnly || 
 				    !pageTable[pageRead].valid ) 
@@ -346,11 +334,6 @@ public class UserProcess {
 
 			return length - remainBytes;
 		}
-
-//		int amount = Math.min(length, memory.length - vaddr);
-//		System.arraycopy(memory, vaddr, data, offset, amount);
-
-	//	return 0;
 
 	}
 
@@ -499,6 +482,7 @@ public class UserProcess {
 			}
 		}
 
+//System.out.println( "We have in total " + numPages + " for PID " + this.processID);
 		return true;
 	}
 
@@ -530,9 +514,7 @@ public class UserProcess {
 
 		// initialize the first two argument registers to argc and argv
 		processor.writeRegister(Processor.regA0, argc);
-		fileCount++;
 		processor.writeRegister(Processor.regA1, argv);
-		fileCount++;
 	}
 
   /**
@@ -551,6 +533,7 @@ public class UserProcess {
     String filename = readVirtualMemoryString( nameaddr, maxLen );
 		if( filename == null ) return -1; // Error
 
+//System.out.println( this.processID + " Create the file " + filename );
 		// True to create the file if it does not exist yet
 		OpenFile fileOpened = ThreadedKernel.fileSystem.open( filename, true );
 		if( fileOpened == null ) return -1; // Error
@@ -560,7 +543,7 @@ public class UserProcess {
       if( fileTable[i] == null ){
         fileTable[i] = fileOpened;
 				fileCount++;
-//System.out.println( "now we created file " + filename + " with decriptor " + i);
+//System.out.println( "Now  have " + fileCount + " files open" );
 				return i;
 			}
 		}
@@ -584,6 +567,7 @@ public class UserProcess {
 		if( fileCount >= maxOpenFiles ) return -1;
 
     String filename = readVirtualMemoryString( nameaddr, maxLen );
+//System.out.println( this.processID + " is the PId and Get the file " + filename );
 		if( filename == null ) return -1; // Error
 
 		// False so we don't create the file if it does not exist
@@ -616,6 +600,7 @@ public class UserProcess {
     OpenFile file = fileTable[fileDescriptor];
 		if( file == null ) return -1; // Error
 
+//System.out.println( "reading from file " + file.getName() );
 		if( count < 0 ) return -1; // Error
 		if( count == 0 ) return 0; 
 
@@ -628,18 +613,19 @@ public class UserProcess {
 			else numBytesReadOnce = count - numBytesReadTotal;
 
 		  // Keep reading until we get all the bytes we want
-		  numBytesReadOnce = file.read(buf, 0, numBytesReadOnce );
-//System.out.println( "printing the bytes: " +  new String(buf));
+		  int retVal = file.read(buf, 0, numBytesReadOnce );
 
-			// Write the read bytes off to the pointer
-      int retVal =  writeVirtualMemory( bufaddr + numBytesReadTotal, 
-			                                  buf, 0, numBytesReadOnce);
+      int wetVal = writeVirtualMemory( bufaddr + numBytesReadTotal,
+			                                 buf, 0, retVal );
+      numBytesReadTotal += retVal;
 
-      if( retVal <= 0 ) return -1; // Out of memory for pointer
-			
-			numBytesReadTotal += numBytesReadOnce;
+			// If we get an 0 from either, then an error occured
+			if( retVal == 0 || wetVal == 0 ) return -1;
+
+      // If we read less than what we want, then there is an error
+			// or we don't have that many bytes
+      if( retVal < numBytesReadOnce ) break;
 		}
-//System.out.println( "We read bytes : " + numBytesReadTotal );
     return numBytesReadTotal;
 	}
 
@@ -655,7 +641,7 @@ public class UserProcess {
 		OpenFile file = fileTable[fileDescriptor];
 		if( file == null ) return -1;
 
-		if( count < 0 ) return -1;
+		if( count < 0) return -1;
 		if( count == 0 ) return 0;
 
     byte[] buf = new byte[pageSize];
@@ -668,16 +654,13 @@ public class UserProcess {
 			  numBytesWrittenOnce = pageSize;
 			else numBytesWrittenOnce = count - numBytesWrittenTotal;
 
-//System.out.println( "UserProcess, line + 639" );
 			// Get the bytes from bufaddr to buf
 			int retValSucking = readVirtualMemory( bufaddr + numBytesWrittenTotal,
 		                                  buf, 0, numBytesWrittenOnce );
       if( retValSucking <= 0 ) return -1;
-//System.out.println( "Read from memory: " + new String(buf) );
 
 			numBytesWrittenTotal += numBytesWrittenOnce;
 
-//System.out.println( "in write we are writing: " + new String(buf));
 			// Write buf into file
 			int retValWriting = file.write( buf, 0, retValSucking );
 			if( retValWriting == -1 ) return -1;
@@ -699,6 +682,7 @@ public class UserProcess {
 		file.close();
 		fileTable[fileDescriptor] = null;
 		fileCount--;
+//System.err.println( this.processID + " PID We have " + fileCount + " file left." );
 
 		return 0;
 	}
@@ -718,37 +702,42 @@ public class UserProcess {
 	 * Handle the exec() system call.
 	 */
 	private int handleExec(int fileNameAddr, int argc, int argvAddr ) {
+	  String extCoff = ".coff";
     if( fileCount == maxOpenFiles ) return -1;
 		if( argc < 0 ) return -1;
 		if( argvAddr < 0 || argvAddr > numPages * pageSize ) return -1;
 
     // Load the file
 		String fileName = readVirtualMemoryString( fileNameAddr, maxLen );
-		if( fileName == null ) return -1;
+		if( fileName == null || fileName.length() <= extCoff.length()) return -1;
 
 		// Check the coff extension
-		String extCoff = ".coff";
 		String extension = fileName.substring( fileName.length() - extCoff.length(),
 		                                       fileName.length());
 		if( !extension.equals( extCoff )) return -1;
+
+    // Try open the file. If the file is not openable, then return -1
+    if( ThreadedKernel.fileSystem.open( fileName, false) == null ) return -1;
 
 		// Get all the args
 		byte ptr[] = new byte[sizeOfPtr];
 		int argvPtr; // Pointer to string
 		String argv[] = new String[argc]; // Strings
+	//	int argv[] = new int[argc];
 		for( int i = 0 ; i < argc ; i++ ) {
       int numBytesRead = readVirtualMemory( (i * sizeOfPtr + argvAddr), 
 			                                       ptr, 0, sizeOfPtr );
 			if( numBytesRead != sizeOfPtr ) return -1;
 			// Got this way of converting 4 bytes to an int from
 			// https://stackoverflow.com/questions/9581530/converting-from-byte-to-int-in-java
-			argvPtr= (ptr[0] << 24) & 0xff |
-			         (ptr[1] << 16) & 0x00ff |
-							 (ptr[2] << 8 ) & 0x0000ff|
-							 (ptr[3] << 0 ) & 0x000000ff;
+			argvPtr= (ptr[3] << 24) & 0xff000000 |
+			         (ptr[3] << 16) & 0x00ff0000 |
+							 (ptr[1] << 8 ) & 0x0000ff00|
+							 (ptr[0] << 0 ) & 0x000000ff;
 			if( argvPtr < 0 || argvPtr > numPages * pageSize ) return -1;
 
       argv[i] = readVirtualMemoryString( argvPtr, maxLen );
+		 //argv[i] = argvPtr;
 			if( argv[i] == null ) return -1;
 		}
 
@@ -767,20 +756,29 @@ public class UserProcess {
 	 */
 	private int handleJoin(int childPID, int statusAddr) {
     // First check if the PID of the child's PID is still a child
-		if( !childProcesses.containsKey( childPID ) ) return 1;
-
+		if( !childProcesses.containsKey( childPID ) ) return -1;
 		UserProcess childProcess = childProcesses.get( childPID );
-		childProcess.parentJoined = true;
-		currentThread.sleep();
 
+    childProcess.currentThread.join();
     // Resume and disown the child, check the exit status
-		int childExitStat;
+		if( !childExits.containsKey( childPID ) || 
+		    childExits.get(childPID) == 0 ) return 1;
+
+		int childExitStat = childExits.get( childPID );
     byte childExitBytes[] = new byte[sizeOfPtr];
-		if( readVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
-		    != sizeOfPtr ) return 0;
-		childExitStat = ByteBuffer.wrap( childExitBytes ).getInt();
-		if( childExitStat != 1 ) return 0;
-    else return 1;
+		// Write that value to the address
+		// Get the method from 
+		// stackoverflow.com/questions/6374915/java-convert-int-to-byte-array-of-4-bytes
+		childExitBytes[0] = (byte)(childExitStat);
+		childExitBytes[1] = (byte)(childExitStat >>> 8);
+		childExitBytes[2] = (byte)(childExitStat >>> 16);
+		childExitBytes[3] = (byte)(childExitStat >>> 24);
+
+		if( writeVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
+		    != sizeOfPtr ) return -1;
+		else return 0;
+	//	if( childExitStat != 1 ) return 0;
+    //else return 1;
 	}
 
 	/**
@@ -810,36 +808,30 @@ public class UserProcess {
 		// Close all the files
 		for( int i = 0 ; i < maxOpenFiles ; i ++ ) {
       if( fileTable[i] != null ) {
+//System.out.println( "Getting rid of file: " + fileTable[i].getName());
         fileTable[i].close();
+				fileTable[i] = null;
 			}
 		}
 
-    // All the children goes to the process's parent
+    // All the children goes to the root process
 		Iterator it = childProcesses.entrySet().iterator();
 		while( it.hasNext() ) {
       Map.Entry pair = (Map.Entry)it.next();
-			if( parentProcess != null ) {
-		  	parentProcess.addChildProcess( (Integer)pair.getKey(), 
+		  UserKernel.ROOT.addChildProcess( (Integer)pair.getKey(), 
 			                               (UserProcess)pair.getValue() );
 			
-			  ((UserProcess)pair.getValue()).setParent( parentProcess );
-			}
-			else {
-        ((UserProcess)pair.getValue()).setParent( null );
-			}
+			((UserProcess)pair.getValue()).setParent( UserKernel.ROOT );
 			childProcesses.remove( pair.getKey() );
 		}
 
-    exitStatus = status;
     if( processID == 0 ) Kernel.kernel.terminate();
-		else {
-		  if( parentJoined ) {
-        parentJoined = false;
-				parentProcess.currentThread.ready();
-			}
+		else if( parentProcess != null ) {
+		  parentProcess.addChildExitStatus( this.processID, status );
 		  parentProcess.deleteChildProcess( this.processID );
-      KThread.currentThread().finish();
 		}
+//System.out.println( "Finishing PID " + this.processID + " with exitstatus " + status);
+      KThread.currentThread().finish();
 		return 0;
 	}
 
@@ -958,10 +950,19 @@ public class UserProcess {
 					processor.readRegister(Processor.regA2),
 					processor.readRegister(Processor.regA3));
 			processor.writeRegister(Processor.regV0, result);
+
+			// Write the result to the parent's record
+		//	if( parentProcess != null ) {
+     //   parentProcess.addChildExitStatus( this.processID, result );
+		//	}
 			processor.advancePC();
 			break;
 
 		default:
+		  // Same here
+			//if( parentProcess != null ) {
+        //parentProcess.addChildExitStatus( this.processID, cause );
+			//}
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
@@ -990,12 +991,12 @@ public class UserProcess {
 
   /** For handling the access to file system */
 	private static final int maxOpenFiles = 16;
-	private static int fileCount = 0;
-	protected static OpenFile[] fileTable;
+	private int fileCount = 0;
+	protected OpenFile[] fileTable;
 	private int maxLen = 256; // Max bits for the name of a file
 	private static final int sizeOfPtr = 4;
 
-	private int exitStatus;
+	//public int exitStatus;
 	public KThread currentThread;
 
 	/** For handling multiprogramming */
@@ -1028,7 +1029,9 @@ public class UserProcess {
 	/** For handling multiprocessing */
 	public int processID;
 	private UserProcess parentProcess;
-	private HashMap<Integer, UserProcess> childProcesses; // Map to store child processes 
+	private HashMap<Integer, UserProcess> childProcesses; 
+	// Map to store child processes's exit statues
+	private HashMap<Integer, Integer> childExits; 
 	public boolean parentJoined = false;
   public int setPID( int itsID ) {
     processID = itsID;
@@ -1047,5 +1050,9 @@ public class UserProcess {
 	}
 	public void deleteChildProcess( int id ) {
     childProcesses.remove(id);
+	}
+	public int addChildExitStatus( int id, int status ){
+    childExits.put(id, status);
+		return status;
 	}
 }

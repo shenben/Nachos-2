@@ -36,9 +36,9 @@ int testWriteFromRead(){
 int testWriteLargeFile(){
   int file = open( "largeFile" );
 	int file2 = creat( "largeFileDump" );
-	char buf[1000];
-	read( file, buf, 1000 );
-	write(file2, buf, 1000 );
+	char buf[10000];
+	read( file, buf, 10000 );
+	write(file2, buf, 10000 );
 }
 
 int testWrite4() {
@@ -70,13 +70,24 @@ int testWrite4() {
 	}
 }
 
+int testArgCheck() {
+  char buf[1000];
+  printf( "Testing bad file descriptor\n" );
+	int ret17 = write( 17, buf, 12 );
+  if( ret17 != -1 ) printf( "Expected -1 but got %d \n", ret17 );
+
+	int ret6 = write( 6, buf, 12 );
+	if( ret6 != -1 ) printf( "Expected -1 but got %d \n", ret6 );
+}
+
 
 int main() {
-  testWriteToOut();
+  //testWriteToOut();
   //testWriteToFile();
 	//testWriteEmptyString();
 	//testWriteFromRead();
-	//testWriteLargeFile();
+//	testWriteLargeFile();
 //	testWrite4();
+  testArgCheck();
 	halt();
 }

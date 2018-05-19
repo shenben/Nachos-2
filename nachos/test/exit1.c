@@ -5,10 +5,25 @@
  */
    
 #include "syscall.h"
+#include "stdio.h"
+#include "stdlib.h"
+
+int testExit(){
+  int i = 0;
+	for( i = 0 ; i < 10 ; i++ ) {
+    printf( "%d's loop\n", i );
+		if( i == 8 ){
+      exit( 1 );
+		}
+	}
+	printf( "You should not see this\n" );
+}
+
 
 int
 main (int argc, char *argv[])
 {
-    exit (123);
-		halt();
+   // testExit();
+	 exit(123);
+		//halt();
 }

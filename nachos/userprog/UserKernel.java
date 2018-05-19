@@ -111,6 +111,7 @@ public class UserKernel extends ThreadedKernel {
 		UserProcess process = UserProcess.newUserProcess();
 		process.setPID( numProcess );
 		increaseProcess();
+		ROOT = process;
 
 		String shellProgram = Machine.getShellProgramName();
 		Lib.assertTrue(process.execute(shellProgram, new String[] {}));
@@ -171,12 +172,15 @@ public class UserKernel extends ThreadedKernel {
 		pageLock.acquire();
 		freePhyPages.add(i);
 		pageLock.release();
+//System.out.println( "In kernel we have " + freePhyPages.size() + " left from "
+  //                     + Machine.processor().getNumPhysPages() + " total pages");
 		return i;
 	}
 
   /** To handle multiprocess */
 	private static Lock processLock;
 	private static int numProcess = 0;
+	public static UserProcess ROOT;
 	public static int increaseProcess() {
 	  processLock.acquire();
     numProcess++;
