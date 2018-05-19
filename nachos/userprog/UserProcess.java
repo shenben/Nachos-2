@@ -170,10 +170,61 @@ public class UserProcess {
 			return -1;
 
 		//int amount = Math.min(length, memory.length - vaddr);
-		int amount = Math.min(length, (numPages * pageSize) - vaddr);
-		System.arraycopy(memory, vaddr, data, offset, amount);
+		//int amount = Math.min(length, (numPages * pageSize) - vaddr);
+		//System.arraycopy(memory, vaddr, data, offset, amount);
 
-		return amount;
+    // Translations
+    int vpBase = vaddr / pageSize;
+    int vpOff = vaddr % pageSize;
+
+    if ( vpBase >= numPages || pageTable[vpBase] == null || !pageTable[vpBase].valid )
+      return -1;
+
+    int ppBase = pageTable[vpBase].ppn;
+    int paddr = ppBase * pageSize + vpOff;
+
+    if ( paddr < 0 || paddr >= memory.length )
+      return -1;
+
+    // Only need this page of memory
+    if ( (length + vpOff) < pageSize ) {
+      System.arraycopy(memory, paddr, data, offset, length);
+      pageTable[vpBase].used = true;
+      return length;
+    // Need multiple pages of physical memory
+    } else {
+      System.arraycopy(memory, paddr, data, offset, (pageSize - vpOff));
+
+      int remainingBytes = length - (pageSize - vpOff);
+      int nextPage = vpBase + 1;
+      offset += (pageSize - vpOff);
+
+      if (nextPage >= numPages || offset > length) return remainingBytes;
+
+      while (remainingBytes > pageSize) {
+        if (pageTable[nextPage] == null || !pageTable[nextPage].valid)
+          return (length - remainingBytes);
+
+        pageTable[nextPage].used = true;
+
+        paddr = pageTable[nextPage].ppn * pageSize;
+        System.arraycopy(memory, paddr, data, offset, pageSize);
+        
+        // Update
+        remainingBytes -= pageSize;
+        offset += pageSize;
+        nextPage++;
+      }
+
+      // Last part where need less than a full page of bytes
+      paddr = pageTable[nextPage].ppn * pageSize;
+      System.arraycopy(memory, paddr, data, offset, remainingBytes);
+      pageTable[nextPage].used = true;
+      remainingBytes = 0;
+      return length;
+    }
+
+		//return amount;
 	}
 
 	/**
@@ -214,10 +265,67 @@ public class UserProcess {
 			return -1;
 
 		//int amount = Math.min(length, memory.length - vaddr);
-		int amount = Math.min(length, (numPages * pageSize) - vaddr);
-		System.arraycopy(data, offset, memory, vaddr, amount);
+		//int amount = Math.min(length, (numPages * pageSize) - vaddr);
+		//System.arraycopy(data, offset, memory, vaddr, amount);
 
-		return amount;
+    // Translations
+    int vpBase = vaddr / pageSize;
+    int vpOff = vaddr % pageSize;
+
+    if (vpBase >= numPages || pageTable[vpBase] == null || !pageTable[vpBase].valid
+        || pageTable[vpBase].readOnly)
+      return -1;
+
+    int ppBase = pageTable[vpBase].ppn;
+    int paddr = ppBase * pageSize + vpOff;
+
+    if (paddr < 0 || paddr >= memory.length)
+      return -1;
+
+    if ( (length - vpOff) < pageSize ) {
+      System.arraycopy(data, offset, memory, paddr, length);
+      pageTable[vpBase].used = true;
+      pageTable[vpBase].dirty = true;
+      return length;
+    } else {
+      System.arraycopy(data, offset, memory, paddr, (pageSize - vpOff));
+      pageTable[vpBase].used = true;
+      pageTable[vpBase].dirty = true;
+
+      int remainingBytes = length - (pageSize - vpOff);
+      offset += (pageSize - vpOff);
+      int nextPage = vpBase + 1;
+
+      if (nextPage >= numPages || offset > length)
+        return remainingBytes;
+      
+      while (remainingBytes > pageSize) {
+        if (pageTable[nextPage] == null || pageTable[nextPage].readOnly
+            || !pageTable[nextPage].valid)
+          return (length - remainingBytes);
+
+        pageTable[vpBase].used = true;
+        pageTable[vpBase].dirty = true;
+
+        paddr = pageTable[nextPage].ppn * pageSize;
+        System.arraycopy(data, offset, memory, paddr, pageSize);
+
+        // Update
+        remainingBytes -= pageSize;
+        offset += pageSize;
+        nextPage++;
+      }
+
+      // On last page when don't need full page length num bytes
+      paddr = pageTable[nextPage].ppn * pageSize;
+      System.arraycopy(data, offset, memory, paddr, remainingBytes);
+      pageTable[vpBase].used = true;
+      pageTable[vpBase].dirty = true;
+      remainingBytes = 0;
+      return length;
+    }
+
+		//return amount;
 	}
 
 	/**
