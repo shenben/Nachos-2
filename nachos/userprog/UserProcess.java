@@ -235,6 +235,7 @@ public class UserProcess {
 
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
+      System.out.println("open failed");
 			Lib.debug(dbgProcess, "\topen failed");
 			return false;
 		}
@@ -244,6 +245,7 @@ public class UserProcess {
 		}
 		catch (EOFException e) {
 			executable.close();
+      System.out.println("coff load failed");
 			Lib.debug(dbgProcess, "\tcoff load failed");
 			return false;
 		}
@@ -254,6 +256,7 @@ public class UserProcess {
 			CoffSection section = coff.getSection(s);
 			if (section.getFirstVPN() != numPages) {
 				coff.close();
+        System.out.println("fragmented executable");
 				Lib.debug(dbgProcess, "\tfragmented executable");
 				return false;
 			}
@@ -270,6 +273,7 @@ public class UserProcess {
 		}
 		if (argsSize > pageSize) {
 			coff.close();
+      System.out.println("arguments too long");
 			Lib.debug(dbgProcess, "\targuments too long");
 			return false;
 		}
@@ -284,8 +288,10 @@ public class UserProcess {
 		// and finally reserve 1 page for arguments
 		numPages++;
 
-		if (!loadSections())
+		if (!loadSections()) {
+      System.out.println("loadSections failed");
 			return false;
+    }
 
 		// store arguments in last page
 		int entryOffset = (numPages - 1) * pageSize;
@@ -337,15 +343,15 @@ public class UserProcess {
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
 
-				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
-
         int ppn = UserKernel.allocPage();
         if ( section.isReadOnly() ) {
           pageTable[vpn] = new TranslationEntry(vpn, ppn, true, true, false, false);
         } else {
           pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
         }
+
+				// for now, just assume virtual addresses=physical addresses
+				section.loadPage(i, ppn);
 			}
       prevSectionLength += section.getLength();
 		}
@@ -445,12 +451,6 @@ public class UserProcess {
 
     // TODO write to parent status + wake up (if called join)
 
-    // set status to 0 TODO check
-    // ONLY IF EXITING NORMALLY TODO
-    byte[] data = new byte[1];
-    data[0] = '0';
-    writeVirtualMemory( status, data, 0, 1 );
-
     if ( UserKernel.getNumProc() == 0 ) {
       Kernel.kernel.terminate();
     } else {
@@ -466,10 +466,11 @@ public class UserProcess {
   private int handleExec(int faddr, int argc, int aaddr) {
     if ((argc < 0) || ((argc > 0) && (aaddr == 0)) 
         || aaddr < 0 || aaddr > (numPages * pageSize)
-        || faddr <= 0 || faddr > (numPages * pageSize) ) //TODO makes sense for files?
+        || faddr <= 0 || faddr > (numPages * pageSize) )
       return -1;
     
     System.out.println("argc = " + argc);
+    System.out.println("argv starting addr = " + aaddr);
 
     String filename = readVirtualMemoryString( faddr, maxLen );
     if ( filename == null || !filename.endsWith(".coff") ) 
@@ -479,18 +480,13 @@ public class UserProcess {
 
     // Argument passing
     String[] args = new String[argc];
-    byte[] buffer = new byte[4];
     for (int i = 0, s = 0; i < (argc * 4); i += 4, s++) {
-      int check = readVirtualMemory( aaddr + i, buffer, 0, 4 );
-      if ( check == -1 || check != 4 ) {
-        System.out.println("check = " + check);
+      String arg = readVirtualMemoryString( aaddr + 1, maxLen );
+      if ( arg == null ) {
+        System.out.println("arg is null");
         return -1;
       }
-      int argptr = new BigInteger(buffer).intValue();
-      String arg = readVirtualMemoryString( argptr, maxLen );
-      if ( arg == null ) return -1;
       args[s] = arg;
-      System.out.println("argv[" + i + "] = " + arg);
     }
 
     UserProcess child = newUserProcess();
@@ -508,6 +504,21 @@ public class UserProcess {
     if ( pid < 0 || pid >= numProcesses 
         || saddr <= 0 || saddr > (numPages * pageSize) )
       return -1;
+
+    for (int i = 0; i < children.size(); i++) {
+      // pid matches one of children
+      if (pid == children.get(i).getPID()) break;
+      // iterated through all children without match
+      if (i == (children.size() - 1)) return -1;
+    }
+
+    // suspend execution of current process
+    // if child already executed by time of call: ret immediately
+    // when curr proc resumes: disown child
+    //
+    // child exit normally: ret 1 + transfer exit status to parent
+    // child exit abnorm: ret 0 + don't need to set status bit
+
     return -1;
   }
 
@@ -520,7 +531,7 @@ public class UserProcess {
     String name = readVirtualMemoryString( nameaddr, maxLen );
     if ( name == null ) return -1;
 
-    OpenFile of = ThreadedKernel.fileSystem.open(name, true); //TODO true/false correct?
+    OpenFile of = ThreadedKernel.fileSystem.open(name, true); 
     if ( of == null ) return -1;
 
     if ( fileCount >= maxOpenFiles ) {

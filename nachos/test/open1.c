@@ -7,8 +7,10 @@
 #include "syscall.h"
 
 int main(int argc, char * argv[]) {
-  int fd1 = open("oldfile.c");
-  int fd2 = open("oldfile.c");
+  char * n1 = "oldfile.c";
+  char * n2 = "oldfile.c";
+  int fd1 = open(n1);
+  int fd2 = open(n2);
   close(fd1);
   close(fd2);
   return 0;

@@ -32,7 +32,8 @@ public class UserKernel extends ThreadedKernel {
     numFreePages = numPhysPages;
     freePages = new LinkedList<Integer>();
     for (int i = 0; i < numFreePages; i++) {
-      freePages.add(i);
+      //freePages.add(i);
+      freePages.addFirst(i);
     }
 
 		Machine.processor().setExceptionHandler(new Runnable() {
@@ -135,7 +136,8 @@ public class UserKernel extends ThreadedKernel {
     if ( numFreePages == 0 )
       return -1;
 
-    int page = freePages.removeFirst();
+    //int page = freePages.removeFirst();
+    int page = freePages.removeLast();
     numFreePages--;
 
     lock.release();
@@ -152,7 +154,8 @@ public class UserKernel extends ThreadedKernel {
     if ( ppn >= numPhysPages || ppn < 0 )
       return -1;
 
-    freePages.add(ppn);
+    //freePages.add(ppn);
+    freePages.addFirst(ppn);
     numFreePages++;
 
     lock.release();
