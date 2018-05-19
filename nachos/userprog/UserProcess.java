@@ -8,6 +8,7 @@ import nachos.vm.*;
 import java.io.EOFException;
 import java.util.LinkedList;
 import java.math.BigInteger;
+import java.util.HashMap;
 
 /**
  * Encapsulates the state of a user process that is not contained in its user
@@ -29,6 +30,8 @@ public class UserProcess {
 		numFreePhys = UserKernel.getNumFreePages();
 
     children = new LinkedList<UserProcess>();
+    childExits = new HashMap<Integer, Integer>();
+    childAbnormal = new HashMap<Integer, Boolean>();
 
     // Initialize 0/1 indices w stdin/stdout
     fileTable = new OpenFile[maxOpenFiles];
@@ -81,7 +84,8 @@ public class UserProcess {
 		if (!load(name, args))
 			return false;
 
-		new UThread(this).setName(name).fork();
+		currentThread = new UThread(this).setName(name);
+    currentThread.fork();
 
 		return true;
 	}
@@ -164,14 +168,9 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		// for now, just assume that virtual addresses equal physical addresses
     if (vaddr <= 0 || vaddr >= (numPages * pageSize) 
         || (vaddr + offset + length) >= (numPages * pageSize))
 			return -1;
-
-		//int amount = Math.min(length, memory.length - vaddr);
-		//int amount = Math.min(length, (numPages * pageSize) - vaddr);
-		//System.arraycopy(memory, vaddr, data, offset, amount);
 
     // Translations
     int vpBase = vaddr / pageSize;
@@ -186,13 +185,11 @@ public class UserProcess {
     if ( paddr < 0 || paddr >= memory.length )
       return -1;
 
-    // Only need this page of memory
-    if ( (length + vpOff) < pageSize ) {
+    if ( (length + vpOff) < pageSize ) { // Only need this page of memory
       System.arraycopy(memory, paddr, data, offset, length);
       pageTable[vpBase].used = true;
       return length;
-    // Need multiple pages of physical memory
-    } else {
+    } else { // Need multiple pages of physical memory
       System.arraycopy(memory, paddr, data, offset, (pageSize - vpOff));
 
       int remainingBytes = length - (pageSize - vpOff);
@@ -223,8 +220,6 @@ public class UserProcess {
       remainingBytes = 0;
       return length;
     }
-
-		//return amount;
 	}
 
 	/**
@@ -259,14 +254,9 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		// for now, just assume that virtual addresses equal physical addresses
     if (vaddr <= 0 || vaddr >= (numPages * pageSize) 
         || (vaddr + offset + length) >= (numPages * pageSize))
 			return -1;
-
-		//int amount = Math.min(length, memory.length - vaddr);
-		//int amount = Math.min(length, (numPages * pageSize) - vaddr);
-		//System.arraycopy(data, offset, memory, vaddr, amount);
 
     // Translations
     int vpBase = vaddr / pageSize;
@@ -324,8 +314,6 @@ public class UserProcess {
       remainingBytes = 0;
       return length;
     }
-
-		//return amount;
 	}
 
 	/**
@@ -343,7 +331,6 @@ public class UserProcess {
 
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
-      System.out.println("open failed");
 			Lib.debug(dbgProcess, "\topen failed");
 			return false;
 		}
@@ -353,7 +340,6 @@ public class UserProcess {
 		}
 		catch (EOFException e) {
 			executable.close();
-      System.out.println("coff load failed");
 			Lib.debug(dbgProcess, "\tcoff load failed");
 			return false;
 		}
@@ -364,7 +350,6 @@ public class UserProcess {
 			CoffSection section = coff.getSection(s);
 			if (section.getFirstVPN() != numPages) {
 				coff.close();
-        System.out.println("fragmented executable");
 				Lib.debug(dbgProcess, "\tfragmented executable");
 				return false;
 			}
@@ -381,7 +366,6 @@ public class UserProcess {
 		}
 		if (argsSize > pageSize) {
 			coff.close();
-      System.out.println("arguments too long");
 			Lib.debug(dbgProcess, "\targuments too long");
 			return false;
 		}
@@ -397,7 +381,6 @@ public class UserProcess {
 		numPages++;
 
 		if (!loadSections()) {
-      System.out.println("loadSections failed");
 			return false;
     }
 
@@ -458,7 +441,6 @@ public class UserProcess {
           pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
         }
 
-				// for now, just assume virtual addresses=physical addresses
 				section.loadPage(i, ppn);
 			}
       prevSectionLength += section.getLength();
@@ -536,7 +518,7 @@ public class UserProcess {
 
     System.out.println("status: " + status);
 
-    // close files
+    // Close files
     for (int i = 0; i < maxOpenFiles; i++) {
       OpenFile of = fileTable[i];
       if ( of == null ) continue;
@@ -552,12 +534,14 @@ public class UserProcess {
     }
 
     unloadSections();
-
     UserKernel.decNumProc();
-
     coff.close();
 
-    // TODO write to parent status + wake up (if called join)
+    // Signal parent
+    UserProcess p = getParent();
+    if ( p != null ) {
+      p.addChildExitStatus( this.getPID(), status );
+    }
 
     if ( UserKernel.getNumProc() == 0 ) {
       Kernel.kernel.terminate();
@@ -627,6 +611,7 @@ public class UserProcess {
         || saddr <= 0 || saddr > (numPages * pageSize) )
       return -1;
 
+    System.out.println("Child PID = " + pid);
     UserProcess child = null;
     for (int i = 0; i < children.size(); i++) {
       // pid matches one of children
@@ -634,23 +619,37 @@ public class UserProcess {
         child = children.get(i);
         break;
       }
-      // iterated through all children without match
+      // Iterated through all children without match
       if (i == (children.size() - 1)) return -1;
     }
 
+    // For loop didn't work..?
     if (child == null) return -1;
 
-    // suspend execution of current process
-    // if child already executed by time of call: ret immediately
-    // when curr proc resumes: disown child
-    //
-    // child exit normally: ret 1 + transfer exit status to parent
-    // child exit abnorm: ret 0 + don't need to set status bit
+    child.currentThread.join();
 
-    System.out.println("Child PID = " + child.getPID());
-    //child.currentThread.join();
+    if (!childExits.containsKey(pid)) return -1;
 
-    return -1;
+    // Disown
+    children.remove(child);
+
+    if (childAbnormal.containsKey(pid)) { // Abnormal exit
+      return 0;
+    } else { 
+      // Transfer exit status to parent
+      int childStatus = childExits.get(pid);
+      byte[] exitBytes = new byte[4];
+      
+      exitBytes[0] = (byte) (childStatus);
+      exitBytes[1] = (byte) (childStatus >>> 8);
+      exitBytes[2] = (byte) (childStatus >>> 16);
+      exitBytes[3] = (byte) (childStatus >>> 24);
+
+      int check = writeVirtualMemory(saddr, exitBytes, 0, 4);
+      if (check == -1 || check != 4)
+        return -1;
+      return 1;
+    }
   }
 
   /**
@@ -939,8 +938,7 @@ public class UserProcess {
     case Processor.exceptionAddressError:
     case Processor.exceptionOverflow:
     case Processor.exceptionIllegalInstruction:
-      System.out.println("EXCEPTION: " + cause);
-      // TODO notify parent
+      getParent().addAbnormal(getPID(), true);
       handleExit(0);
       break;
 
@@ -954,14 +952,38 @@ public class UserProcess {
 	}
 
   /**
-   * Accessor for other PIDs
+   * Accessor for other PIDs.
    */
   public int getPID() {
     return pid;
   }
 
+  /**
+   * Mutator for process parent.
+   */
   public void setParent(UserProcess p) {
     parent = p;
+  }
+
+  /**
+   * Accessor for process parent.
+   */
+  public UserProcess getParent() {
+    return this.parent;
+  }
+
+  /**
+   * Track children exit statuses.
+   */
+  public void addChildExitStatus( int pid, int status ) {
+    childExits.put(pid, status);
+  }
+
+  /**
+   * Track any abnormally exited children.
+   */
+  public void addAbnormal( int pid, boolean b ) {
+    childAbnormal.put(pid, b);
   }
 
 	/** The program being run by this process. */
@@ -997,13 +1019,21 @@ public class UserProcess {
   /** String max length. */
   private int maxLen = 256;
 
-  /** PID of this process vars */
+  /** PID of this process vars. */
   private int pid;
 
   private UserProcess parent = null;
   
   private static int numProcesses = 0;
 
-  /** Track children of this process */
+  /** Track children of this process. */
   private LinkedList<UserProcess> children;
+
+  /** Track exit statuses of children of this process (for join). */
+  private HashMap<Integer, Integer> childExits;
+
+  private HashMap<Integer, Boolean> childAbnormal;
+
+  /** Track current thread (for join). */
+  public KThread currentThread;
 }
