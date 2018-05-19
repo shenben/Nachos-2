@@ -165,6 +165,7 @@ public class UserProcess {
 		System.arraycopy( memory, vaddr, data, offset, amount);
 		return amount;*/
 
+    int bytesRead = 0;
     // Break the length into pages
     int vPageBegin = vaddr / pageSize;
 		int pageLoc = vaddr % pageSize;
@@ -191,7 +192,8 @@ public class UserProcess {
 		else {
 		  // The first part
       System.arraycopy(memory, paddr, data, offset, firstPageLeft );
-
+      bytesRead += firstPageLeft;
+      
 			// Middle part
 			int remainBytes = length - firstPageLeft;
 			int readPages = vPageBegin + 1;
@@ -207,6 +209,7 @@ public class UserProcess {
 
 			  paddr = pageTable[readPages].ppn * pageSize;
         System.arraycopy( memory, paddr, data, offset, pageSize );
+				bytesRead += pageSize;
 				// Update the address and offset
 				remainBytes -= pageSize;
 				offset += (pageSize);
@@ -216,9 +219,10 @@ public class UserProcess {
 			// The final part
 			paddr = pageTable[readPages].ppn * pageSize;
 			System.arraycopy( memory, paddr, data, offset, remainBytes );
+			bytesRead += remainBytes;
 			pageTable[readPages].used = true;
 			remainBytes = 0;
-			return (length - remainBytes);
+			return bytesRead;
 		}
 
 //		int amount = Math.min(length, memory.length - vaddr);
@@ -268,6 +272,7 @@ public class UserProcess {
   	Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
+    int bytesRead = 0;
 		byte[] memory = Machine.processor().getMemory();
 
     // Break the length into pages
@@ -278,7 +283,7 @@ public class UserProcess {
 		// Check the physical address makes sens
 		if( pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ||
 				pageTable[vPageBegin].readOnly ) 
-		  return 0;
+		  return -1;
 
 		int pPageBegin = pageTable[vPageBegin].ppn;
 		int paddr = pPageBegin * pageSize + pageLoc;
@@ -301,6 +306,7 @@ public class UserProcess {
       System.arraycopy(data, offset, memory, paddr, firstPageLeft );
 			pageTable[vPageBegin].used = true;
 			pageTable[vPageBegin].dirty = true;
+			bytesRead += firstPageLeft;
 
 			// Middle part
 			int remainBytes = length - firstPageLeft;
@@ -319,6 +325,7 @@ public class UserProcess {
 				
 			  paddr = pageTable[pageRead].ppn * pageSize;
         System.arraycopy( data, offset, memory, paddr, pageSize );
+				bytesRead += pageSize;
 				// Update the address and offset
 				remainBytes -= pageSize;
 				offset += (pageSize);
@@ -331,9 +338,10 @@ public class UserProcess {
 			System.arraycopy( data, offset, memory, paddr, remainBytes );
 			pageTable[vPageBegin].used = true;
 			pageTable[vPageBegin].used = false;
+			bytesRead += remainBytes;
 			remainBytes = 0;
 
-			return length - remainBytes;
+			return bytesRead;
 		}
 
 	}
@@ -735,7 +743,7 @@ public class UserProcess {
 			// Got this way of converting 4 bytes to an int from
 			// https://stackoverflow.com/questions/9581530/converting-from-byte-to-int-in-java
 			argvPtr= (ptr[3] << 24) & 0xff000000 |
-			         (ptr[3] << 16) & 0x00ff0000 |
+			         (ptr[2] << 16) & 0x00ff0000 |
 							 (ptr[1] << 8 ) & 0x0000ff00|
 							 (ptr[0] << 0 ) & 0x000000ff;
 			if( argvPtr < 0 || argvPtr > numPages * pageSize ) return -1;
@@ -762,12 +770,14 @@ public class UserProcess {
 	private int handleJoin(int childPID, int statusAddr) {
     // First check if the PID of the child's PID is still a child
 		if( !childProcesses.containsKey( childPID ) || statusAddr < 0 ) return -1;
-System.out.println( "ChildPID : " + childPID );
 		UserProcess childProcess = childProcesses.get( childPID );
 
-    childProcess.currentThread.join();
+    if( !childProcess.exited ){
+      childProcess.currentThread.join();
+		}
+
     // Resume and disown the child, check the exit status
-		if( !childExits.containsKey( childPID ) ) return 1;
+		if( !childExits.containsKey( childPID ) ) return -1;
 
 		int childExitStat = childExits.get( childPID );
 System.out.println( "child exited with " + childExitStat );
@@ -782,8 +792,8 @@ System.out.println( "child exited with " + childExitStat );
 
 		if( writeVirtualMemory( statusAddr, childExitBytes, 0, sizeOfPtr ) 
 		    != sizeOfPtr ) return -1;
-		else if( childExitStat == 0 ) return 1;
-		else return 0;
+		else if( childProcess.exitAbnormal ) return 0;
+		else return 1;
 	//	if( childExitStat != 1 ) return 0;
     //else return 1;
 	}
@@ -815,30 +825,25 @@ System.out.println( "child exited with " + childExitStat );
 		// Close all the files
 		for( int i = 0 ; i < maxOpenFiles ; i ++ ) {
       if( fileTable[i] != null ) {
-//System.out.println( "Getting rid of file: " + fileTable[i].getName());
         fileTable[i].close();
 				fileTable[i] = null;
 			}
 		}
-
-    if( processID == 0 ) Kernel.kernel.terminate();
-    // All the children goes to the root process
+    // All the children goes to have no parent process
 		Iterator it = childProcesses.entrySet().iterator();
 		while( it.hasNext() ) {
       Map.Entry pair = (Map.Entry)it.next();
-		  UserKernel.ROOT.addChildProcess( (Integer)pair.getKey(), 
-			                               (UserProcess)pair.getValue() );
 			
-			((UserProcess)pair.getValue()).setParent( UserKernel.ROOT );
-			//childProcesses.remove( pair.getKey() );
+			((UserProcess)pair.getValue()).setParent( null );
 		}
 
 		if( parentProcess != null ) {
 		  parentProcess.addChildExitStatus( this.processID, status );
 		 // parentProcess.deleteChildProcess( this.processID );
 		}
-//System.out.println( "Finishing PID " + this.processID + " with exitstatus " + status);
-      KThread.currentThread().finish();
+    if( UserKernel.decreaseProcess() == 0 ) Kernel.kernel.terminate();
+		exited = true;
+		KThread.currentThread().finish();
 		return 0;
 	}
 
@@ -958,10 +963,6 @@ System.out.println( "child exited with " + childExitStat );
 					processor.readRegister(Processor.regA3));
 			processor.writeRegister(Processor.regV0, result);
 
-			// Write the result to the parent's record
-		//	if( parentProcess != null ) {
-     //   parentProcess.addChildExitStatus( this.processID, result );
-		//	}
 			processor.advancePC();
 			break;
 
@@ -970,6 +971,7 @@ System.out.println( "child exited with " + childExitStat );
 			//if( parentProcess != null ) {
         //parentProcess.addChildExitStatus( this.processID, cause );
 			//}
+      exitAbnormal = true;
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
 			Lib.assertNotReached("Unexpected exception");
@@ -1040,8 +1042,10 @@ System.out.println( "child exited with " + childExitStat );
 	private Lock childLock;
 	// Map to store child processes's exit statues
 	private HashMap<Integer, Integer> childExits; 
-	public boolean parentJoined = false;
-  public int setPID( int itsID ) {
+	public boolean exited = false;
+	public boolean exitAbnormal = false;
+  public KThread parentThread = null;
+	public int setPID( int itsID ) {
     processID = itsID;
 		return processID;
 	}
@@ -1062,5 +1066,10 @@ System.out.println( "child exited with " + childExitStat );
 	public int addChildExitStatus( int id, int status ){
     childExits.put(id, status);
 		return status;
+	}
+
+	public int getChildExitStatus( int id ) {
+    if( childExits.containsKey(id) ) return childExits.get(id);
+		else return Integer.MIN_VALUE;
 	}
 }

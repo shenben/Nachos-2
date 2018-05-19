@@ -13,7 +13,7 @@ int i = 0;
 int testMultiple() {
  // int r, l, k;
 	int childargc = 3;
-	char *childargv[3] = {"cp.coff", "1", "3",};
+	char *childargv[3] = {"cp.coff", "cp.c", "3",};
 
   r = exec( childargv[0], childargc, childargv );
 	l = exec( childargv[0], childargc, childargv );
