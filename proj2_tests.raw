@@ -1,0 +1,63 @@
+------[                  Thu May 31 14:00:11 2018                  ]------
+------[  Grading Commit: 8dec435aea86122dbe3afb44f71c8264b02a2799  ]------
+--[ Test write10.c ]--
+nachos 5.0j initializing... config interrupt timer processor console user-checkjava.lang.NoClassDefFoundError: nachos/threads/Alarm2
+	at java.lang.Class.getDeclaredConstructors0(Native Method)
+	at java.lang.Class.privateGetDeclaredConstructors(Class.java:2671)
+	at java.lang.Class.getConstructor0(Class.java:3075)
+	at java.lang.Class.getConstructor(Class.java:1825)
+	at nachos.machine.Lib.constructObject(Lib.java:512)
+	at nachos.machine.Machine.main(Machine.java:58)
+Caused by: java.lang.ClassNotFoundException: nachos.threads.Alarm2
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:381)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:338)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+	... 6 more
+
+--[ read-long: Test reading large amount from file ]--
+nachos 5.0j initializing... config interrupt timer processor console user-checkjava.lang.NoClassDefFoundError: nachos/threads/Alarm2
+	at java.lang.Class.getDeclaredConstructors0(Native Method)
+	at java.lang.Class.privateGetDeclaredConstructors(Class.java:2671)
+	at java.lang.Class.getConstructor0(Class.java:3075)
+	at java.lang.Class.getConstructor(Class.java:1825)
+	at nachos.machine.Lib.constructObject(Lib.java:512)
+	at nachos.machine.Machine.main(Machine.java:58)
+Caused by: java.lang.ClassNotFoundException: nachos.threads.Alarm2
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:381)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:338)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+	... 6 more
+
+--[ write-long: Test writing large amount to file ]--
+nachos 5.0j initializing... config interrupt timer processor console user-checkjava.lang.NoClassDefFoundError: nachos/threads/Alarm2
+	at java.lang.Class.getDeclaredConstructors0(Native Method)
+	at java.lang.Class.privateGetDeclaredConstructors(Class.java:2671)
+	at java.lang.Class.getConstructor0(Class.java:3075)
+	at java.lang.Class.getConstructor(Class.java:1825)
+	at nachos.machine.Lib.constructObject(Lib.java:512)
+	at nachos.machine.Machine.main(Machine.java:58)
+Caused by: java.lang.ClassNotFoundException: nachos.threads.Alarm2
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:381)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:338)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+	... 6 more
+
+--[ exec2: Execute multiple programs (three children) ]--
+nachos 5.0j initializing... config interrupt timer processor console user-checkjava.lang.NoClassDefFoundError: nachos/threads/Alarm2
+	at java.lang.Class.getDeclaredConstructors0(Native Method)
+	at java.lang.Class.privateGetDeclaredConstructors(Class.java:2671)
+	at java.lang.Class.getConstructor0(Class.java:3075)
+	at java.lang.Class.getConstructor(Class.java:1825)
+	at nachos.machine.Lib.constructObject(Lib.java:512)
+	at nachos.machine.Machine.main(Machine.java:58)
+Caused by: java.lang.ClassNotFoundException: nachos.threads.Alarm2
+	at java.net.URLClassLoader.findClass(URLClassLoader.java:381)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:338)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+	... 6 more
+
+
