@@ -994,16 +994,16 @@ System.out.println( "child exited with " + childExitStat );
 
 	private int argc, argv;
 
-	private static final int pageSize = Processor.pageSize;
+	protected static final int pageSize = Processor.pageSize;
 
-	private static final char dbgProcess = 'a';
+	protected static final char dbgProcess = 'a';
 
   /** For handling the access to file system */
-	private static final int maxOpenFiles = 16;
-	private int fileCount = 0;
+	protected static final int maxOpenFiles = 16;
+	protected int fileCount = 0;
 	protected OpenFile[] fileTable;
-	private int maxLen = 256; // Max bits for the name of a file
-	private static final int sizeOfPtr = 4;
+	protected int maxLen = 256; // Max bits for the name of a file
+	protected static final int sizeOfPtr = 4;
 
 	//public int exitStatus;
 	public KThread currentThread;
@@ -1026,7 +1026,7 @@ System.out.println( "child exited with " + childExitStat );
 	/**
 	 * Return all the pages back to Kernel
 	 */
-  private int returnPages(){
+  protected int returnPages(){
     for( int i = 0 ; i < numPages ; i++ ) {
 		  if( pageTable[i] != null )
         UserKernel.receiveOnePage( pageTable[i].ppn );
@@ -1037,11 +1037,11 @@ System.out.println( "child exited with " + childExitStat );
 
 	/** For handling multiprocessing */
 	public int processID;
-	private UserProcess parentProcess;
-	private HashMap<Integer, UserProcess> childProcesses;
-	private Lock childLock;
+	protected UserProcess parentProcess;
+	protected HashMap<Integer, UserProcess> childProcesses;
+	protected Lock childLock;
 	// Map to store child processes's exit statues
-	private HashMap<Integer, Integer> childExits; 
+	protected HashMap<Integer, Integer> childExits; 
 	public boolean exited = false;
 	public boolean exitAbnormal = false;
   public KThread parentThread = null;

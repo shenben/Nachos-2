@@ -8,7 +8,7 @@
 
 int testCreateNewFile() {
  // printf( "\nTesting open new file called thisIsNotADrill...\n");
-  if( creat( "thisIsNotADrill" ) != 3) {
+  if( creat( "MEOWMEOW" ) != 3) {
 	 
   }
 	//else printf( "Success.\n");
@@ -32,8 +32,8 @@ int testTooManyFiles() {
 int main() {
   printf( "\nTesting create() syscall...\n");
 
-	//testCreateNewFile();
-	//testCreateOldFile();
+	testCreateNewFile();
+	testCreateOldFile();
   testTooManyFiles();
   halt();
 }

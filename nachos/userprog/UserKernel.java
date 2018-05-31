@@ -178,9 +178,9 @@ public class UserKernel extends ThreadedKernel {
 	}
 
   /** To handle multiprocess */
-	private static Lock processLock;
-	private static int numProcess = 0;
-	private static int nextID = 0;
+	protected static Lock processLock;
+	protected static int numProcess = 0;
+	protected static int nextID = 0;
 	public static UserProcess ROOT;
 	public static int increaseProcess() {
 	  processLock.acquire();

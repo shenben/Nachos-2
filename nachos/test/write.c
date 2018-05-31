@@ -37,7 +37,10 @@ int testWriteLargeFile(){
   int file = open( "largeFile" );
 	int file2 = creat( "largeFileDump" );
 	char buf[10000];
+printf( "we do not have a problem here" );
 	read( file, buf, 10000 );
+printf( "This is what we ant o see " );
+printf( "%s", buf );
 	write(file2, buf, 10000 );
 }
 
@@ -86,8 +89,8 @@ int main() {
   //testWriteToFile();
 	//testWriteEmptyString();
 	//testWriteFromRead();
-//	testWriteLargeFile();
+	testWriteLargeFile();
 //	testWrite4();
-  testArgCheck();
+ // testArgCheck();
 	halt();
 }
