@@ -49,7 +49,7 @@ public class VMProcess extends UserProcess {
     int vPageBegin = vaddr / pageSize;
 		int pageLoc = vaddr % pageSize;
 
-    if( vPageBegin >= numPages || pageTable[vPageBegin] == null ) return -1;
+    if( pageTable[vPageBegin] == null ) return -1;
 
 		// Check if the physcial page is allcoated
 		if( !pageTable[vPageBegin].valid) {
@@ -80,7 +80,7 @@ public class VMProcess extends UserProcess {
 			int readPages = vPageBegin + 1;
 			offset += firstPageLeft;
 			
-			if( readPages >= numPages || offset > length ) return bytesRead;
+			if( offset > length ) return bytesRead;
 			while( remainBytes > pageSize ) {
 
         // If the page is not mapped to physical memory, handle it
@@ -147,7 +147,7 @@ public class VMProcess extends UserProcess {
     // Break the length into pages
     int vPageBegin = vaddr / pageSize;
 		int pageLoc = vaddr % pageSize;
-    if( vPageBegin >= numPages ) return 0;
+    //if( vPageBegin >= numPages ) return 0;
 
     // Handle the page allocation
 		if( !pageTable[vPageBegin].valid ){
@@ -186,7 +186,7 @@ public class VMProcess extends UserProcess {
 			int remainBytes = length - firstPageLeft;
 			offset += (firstPageLeft);
 			int pageRead = vPageBegin + 1;
-			if( pageRead >= numPages || offset > length ) return remainBytes;
+			if( /*pageRead >= numPages ||*/ offset > length ) return remainBytes;
 
 			while( remainBytes > pageSize ) {
 			  if( !pageTable[pageRead].valid ){
@@ -238,7 +238,7 @@ public class VMProcess extends UserProcess {
 	protected boolean loadSections() {
 		//return super.loadSections();
 		// When we run out of physical memory
-System.err.println( "numpages is " + numPages + " and we have in total " + 
+/*System.err.println( "numpages is " + numPages + " and we have in total " + 
  UserKernel.getNumFreePages() );
 		if( numPages > UserKernel.getNumFreePages() ) {
       coff.close();
@@ -252,7 +252,7 @@ System.err.println( "numpages is " + numPages + " and we have in total " +
 				}
 			}
 			return false;
-		}
+		}*/
     
 		pageTable = new TranslationEntry[numPages];
 		// For each page we need, we initialize it to invalid pages
@@ -308,8 +308,9 @@ System.err.println( "numpages is " + numPages + " and we have in total " +
     // Map the virtual page to the actual physical page
     pageTable[faultPage].ppn = phyPage;
 		
+		int s = 0;
 		// Get the appropriate data into the physical page
-    for( int s = 0 ; s < coff.getNumSections() ; s++ ) {
+    for( ; s < coff.getNumSections() ; s++ ) {
       CoffSection section = coff.getSection(s);
 
 			for( int i = 0 ; i < section.getLength() ; i++ ) {
@@ -324,9 +325,12 @@ System.err.println( "numpages is " + numPages + " and we have in total " +
 		} // End of for coff.getNumSections
     
 		// zero fill the page if we never got a page from segments
-	//	if( s == coff.getNumSections() ) {
-      
-		//}
+		if( s == coff.getNumSections() && pageTable[faultPage].ppn == -1 ) {
+      int [] zeroFill = new int[pageSize];
+			System.arraycopy( zeroFill, 0, Machine.processor().getMemory(), 
+			                  phyPage * pageSize, pageSize );
+		}
+
 		pageTable[faultPage].valid = true;
 		return 1;
 	}

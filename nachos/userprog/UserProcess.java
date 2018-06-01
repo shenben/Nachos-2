@@ -994,9 +994,9 @@ System.out.println( "child exited with " + childExitStat );
 
 	private int argc, argv;
 
-	protected static final int pageSize = Processor.pageSize;
+	private static final int pageSize = Processor.pageSize;
 
-	protected static final char dbgProcess = 'a';
+	private static final char dbgProcess = 'a';
 
   /** For handling the access to file system */
 	protected static final int maxOpenFiles = 16;

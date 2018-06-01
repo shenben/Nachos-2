@@ -36,12 +36,12 @@ int testWriteFromRead(){
 int testWriteLargeFile(){
   int file = open( "largeFile" );
 	int file2 = creat( "largeFileDump" );
-	char buf[10000];
+	char buf[8000];
 printf( "we do not have a problem here" );
-	read( file, buf, 10000 );
+	read( file, buf, 8000 );
 printf( "This is what we ant o see " );
-printf( "%s", buf );
-	write(file2, buf, 10000 );
+//printf( "%s", buf );
+  write(file2, buf, 8000 );
 }
 
 int testWrite4() {
