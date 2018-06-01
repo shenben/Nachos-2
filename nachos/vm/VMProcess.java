@@ -39,7 +39,11 @@ public class VMProcess extends UserProcess {
 	 * @return <tt>true</tt> if successful.
 	 */
 	protected boolean loadSections() {
-		return super.loadSections();
+    pageTable = new TranslationEntry[numPages];
+		for( int i = 0 ; i < numPages ; i++ ) {
+      pageTable[i] = new TranslationEntry(i, -1, false, false, false, false);
+		}
+    return true;
 	}
 
 	/**
@@ -48,6 +52,50 @@ public class VMProcess extends UserProcess {
 	protected void unloadSections() {
 		super.unloadSections();
 	}
+
+	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+    int vPage = vaddr / pageSize;
+    if (!pageTable[vPage].valid) {
+      return handlePageFault(vaddr);
+    } else {
+      return super.readVirtualMemory(vaddr, data, offset, length);
+    }
+  }
+
+	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+    int vPage = vaddr / pageSize;
+    if (!pageTable[vPage].valid) {
+      return handlePageFault(vaddr);
+    } else {
+      return super.writeVirtualMemory(vaddr, data, offset, length);
+    }
+  }
+
+  /**
+   * Handler for page faults. 
+   */
+  private int handlePageFault(int faddr) {
+    // code, data, or stack page?
+    int numCoff = coff.getNumSections();
+    int sec = faddr / pageSize;
+    if (sec < numCoff) {
+      // Load from coff or swap if not RO TODO how to deal w swap files?
+      // use dirty bits to check if non-RO gotten from swap?
+      CoffSection section = coff.getSection(sec);
+      section.loadPage(section.getFirstVPN() + sec, pageTable[sec].ppn); //TODO why need to loop?
+      if (section.isReadOnly()) pageTable[sec].readOnly = true;
+    } else {
+      // 0-fill
+      byte[] buf = new byte[pageSize];
+      for (int i = 0; i < pageSize; i++) {
+        buf[i] = 0;
+      }
+      writeVirtualMemory(faddr, buf, 0, pageSize);
+    }
+    // Mark page as valid
+    pageTable[sec].valid = true;
+    return -1;
+  }
 
 	/**
 	 * Handle a user exception. Called by <tt>UserKernel.exceptionHandler()</tt>
@@ -60,12 +108,19 @@ public class VMProcess extends UserProcess {
 		Processor processor = Machine.processor();
 
 		switch (cause) {
+    case Processor.exceptionPageFault:
+      handlePageFault(processor.readRegister(Processor.regBadVAddr));
+      break;
 		default:
 			super.handleException(cause);
 			break;
 		}
 	}
 
+	/** This process's page table. */
+	protected TranslationEntry[] pageTable;
+
+  /** Given. */
 	private static final int pageSize = Processor.pageSize;
 
 	private static final char dbgProcess = 'a';
