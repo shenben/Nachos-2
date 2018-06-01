@@ -5,3 +5,10 @@ FAIL : read-long: Test reading large amount from file
 FAIL : write-long: Test writing large amount to file
 FAIL : exec2: Execute multiple programs (three children)
 
+------[                  Fri Jun  1 11:35:12 2018                  ]------
+------[  Grading Commit: 96f2e63cf09f966274a336192100f4a234d7a31b  ]------
+PASS : Test write10.c
+PASS : read-long: Test reading large amount from file
+PASS : write-long: Test writing large amount to file
+PASS : exec2: Execute multiple programs (three children)
+
