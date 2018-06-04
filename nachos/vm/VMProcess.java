@@ -54,25 +54,170 @@ public class VMProcess extends UserProcess {
 		super.unloadSections();
 	}
 
+  /**
+   * readVirtualMemory implementations from UserProcess to 
+   * accomodate local pageTable (and other vars).
+   */
+	public int readVirtualMemory(int vaddr, byte[] data) {
+		return readVirtualMemory(vaddr, data, 0, data.length);
+	}
+
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-    System.out.println("in ReadVM, vaddr = " + vaddr);
-    int vpn = vaddr / pageSize;
-    if (!pageTable[vpn].valid) {
-      return handlePageFault(vaddr);
-    } else {
-      return super.readVirtualMemory(vaddr, data, offset, length);
-    }
-  }
+		Lib.assertTrue(offset >= 0 && length >= 0
+				&& offset + length <= data.length);
+
+    int vPageBegin = vaddr / pageSize;
+    if (!pageTable[vPageBegin].valid) return handlePageFault(vaddr);
+
+		byte[] memory = Machine.processor().getMemory();
+
+		if ( vaddr < 0 || vaddr >= memory.length) return -1;
+
+    int bytesRead = 0;
+    // Break the length into pages
+		int pageLoc = vaddr % pageSize;
+
+		// Check the physical address makes sens
+		if( vPageBegin >= numPages || 
+		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid )
+		 return -1;
+
+		int pPageBegin = pageTable[vPageBegin].ppn;
+		int paddr = pPageBegin * pageSize + pageLoc;
+
+    if( paddr < 0 || paddr >= memory.length ) return -1;
+
+		// First part of the bytes
+		int firstPageLeft = pageSize - pageLoc;
+		// When the bits ends just within this page
+		if( firstPageLeft >= length ) {
+      System.arraycopy(memory, paddr, data, offset, length);
+			pageTable[vPageBegin].used = true;
+			return length;
+		}
+		// When the bits ends beyong this page
+		else {
+		  // The first part
+      System.arraycopy(memory, paddr, data, offset, firstPageLeft );
+      bytesRead += firstPageLeft;
+      
+			// Middle part
+			int remainBytes = length - firstPageLeft;
+			int readPages = vPageBegin + 1;
+			offset += (firstPageLeft );
+			if( readPages >= numPages || offset > length ) return remainBytes;
+			while( remainBytes > pageSize ) {
+			  // Error
+			  if( pageTable[readPages] == null || !pageTable[readPages].valid ) 
+				  return (length - remainBytes);
+
+				// Set the page's attributes
+				pageTable[readPages].used = true;
+
+			  paddr = pageTable[readPages].ppn * pageSize;
+        System.arraycopy( memory, paddr, data, offset, pageSize );
+				bytesRead += pageSize;
+				// Update the address and offset
+				remainBytes -= pageSize;
+				offset += (pageSize);
+				readPages++;
+			}
+			
+			// The final part
+			paddr = pageTable[readPages].ppn * pageSize;
+			System.arraycopy( memory, paddr, data, offset, remainBytes );
+			bytesRead += remainBytes;
+			pageTable[readPages].used = true;
+			remainBytes = 0;
+			return bytesRead;
+		}
+	}
+
+  /**
+   * writeVirtualMemory implementations from UserProcess to 
+   * accomodate local pageTable (and other vars).
+   */
+	public int writeVirtualMemory(int vaddr, byte[] data) {
+		return writeVirtualMemory(vaddr, data, 0, data.length);
+	}
 
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-    System.out.println("in WriteVM, vaddr = " + vaddr);
-    int vpn = vaddr / pageSize;
-    if (!pageTable[vpn].valid) {
-      return handlePageFault(vaddr);
-    } else {
-      return super.writeVirtualMemory(vaddr, data, offset, length);
-    }
-  }
+  	Lib.assertTrue(offset >= 0 && length >= 0
+				&& offset + length <= data.length);
+
+    int vPageBegin = vaddr / pageSize;
+    if (!pageTable[vPageBegin].valid) return handlePageFault(vaddr);
+
+    int bytesRead = 0;
+		byte[] memory = Machine.processor().getMemory();
+
+    // Break the length into pages
+		int pageLoc = vaddr % pageSize;
+    if( vPageBegin >= numPages ) return 0;
+
+		// Check the physical address makes sens
+		if( pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ||
+				pageTable[vPageBegin].readOnly ) 
+		  return -1;
+
+		int pPageBegin = pageTable[vPageBegin].ppn;
+		int paddr = pPageBegin * pageSize + pageLoc;
+
+    //System.out.println( "Now the paddr is at " + paddr );
+		if( paddr < 0 || paddr >= memory.length ) return 0;
+
+		// First part of the bytes
+		int firstPageLeft = pageSize - pageLoc;
+		// When the bits ends just within this page
+		if( firstPageLeft >= length ) {
+      System.arraycopy(data, offset, memory, paddr, length);
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].dirty = true;
+			return length;
+		}
+		// When the bits ends beyong this page
+		else {
+		  // The first part
+      System.arraycopy(data, offset, memory, paddr, firstPageLeft );
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].dirty = true;
+			bytesRead += firstPageLeft;
+
+			// Middle part
+			int remainBytes = length - firstPageLeft;
+			offset += (firstPageLeft);
+			int pageRead = vPageBegin + 1;
+			if( pageRead >= numPages || offset > length ) return remainBytes;
+			while( remainBytes > pageSize ) {
+				// Error
+				if( pageTable[pageRead] == null || pageTable[pageRead].readOnly || 
+				    !pageTable[pageRead].valid ) 
+				  return length - remainBytes;
+
+				// Set the page's attribute
+				pageTable[pageRead].used = true;
+				pageTable[pageRead].dirty = true;
+				
+			  paddr = pageTable[pageRead].ppn * pageSize;
+        System.arraycopy( data, offset, memory, paddr, pageSize );
+				bytesRead += pageSize;
+				// Update the address and offset
+				remainBytes -= pageSize;
+				offset += (pageSize);
+				pageRead++;
+			}
+			
+			// The final part
+			paddr = pageTable[pageRead].ppn * pageSize;
+      //System.out.println( "after the first two parts the paddr is " + paddr );
+			System.arraycopy( data, offset, memory, paddr, remainBytes );
+			pageTable[vPageBegin].used = true;
+			pageTable[vPageBegin].used = false;
+			bytesRead += remainBytes;
+			remainBytes = 0;
+			return bytesRead;
+		}
+	}
 
   /**
    * Handler for page faults. 
@@ -161,11 +306,6 @@ public class VMProcess extends UserProcess {
       // Load as 0-filled if not dirty
       } else {
         System.out.println("Loading as 0-filled");
-        /*byte[] buf = new byte[pageSize];
-        for (int i = 0; i < pageSize; i++) {
-          buf[i] = 0;
-        }
-        writeVirtualMemory(vpn * pageSize, buf, 0, pageSize);*/
         byte[] zeroFill = new byte[pageSize];
 			  System.arraycopy( zeroFill, 0, Machine.processor().getMemory(), 
 			      ppn * pageSize, pageSize );
@@ -173,8 +313,6 @@ public class VMProcess extends UserProcess {
     }
     // Mark page as valid
     pageTable[vpn].valid = true;
-    //pageTable[vpn].used = false;
-    //pageTable[vpn].dirty = false;
     Machine.processor().setPageTable(pageTable);
     return 1;
   }
