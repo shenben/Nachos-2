@@ -159,7 +159,7 @@ public class UserProcess {
 
 		byte[] memory = Machine.processor().getMemory();
 
-		if ( vaddr < 0 || vaddr >= memory.length) return 0;
+		if ( vaddr < 0 || vaddr >= memory.length) return -1;
 /*
 		int amount = Math.min( length, memory.length - vaddr );
 		System.arraycopy( memory, vaddr, data, offset, amount);
@@ -173,12 +173,12 @@ public class UserProcess {
 		// Check the physical address makes sens
 		if( vPageBegin >= numPages || 
 		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid )
-		 return 0;
+		 return -1;
 
 		int pPageBegin = pageTable[vPageBegin].ppn;
 		int paddr = pPageBegin * pageSize + pageLoc;
 
-    if( paddr < 0 || paddr >= memory.length ) return 0;
+    if( paddr < 0 || paddr >= memory.length ) return -1;
 
 		// First part of the bytes
 		int firstPageLeft = pageSize - pageLoc;
@@ -819,6 +819,7 @@ System.out.println( "child exited with " + childExitStat );
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
 		
+    System.out.println("exit status: " + status);
 
 		// Free up memories
 		returnPages();
@@ -971,6 +972,7 @@ System.out.println( "child exited with " + childExitStat );
 			//if( parentProcess != null ) {
         //parentProcess.addChildExitStatus( this.processID, cause );
 			//}
+      System.out.println("cause = " + cause);
       exitAbnormal = true;
 			Lib.debug(dbgProcess, "Unexpected exception: "
 					+ Processor.exceptionNames[cause]);
@@ -1026,11 +1028,13 @@ System.out.println( "child exited with " + childExitStat );
 	/**
 	 * Return all the pages back to Kernel
 	 */
-  private int returnPages(){
+  protected int returnPages(){
+    if (pageTable == null) return -1; 
     for( int i = 0 ; i < numPages ; i++ ) {
-		  if( pageTable[i] != null )
+		  if( pageTable[i] != null ) {
         UserKernel.receiveOnePage( pageTable[i].ppn );
 				pageTable[i] = null;
+      }
 		}
 		return 0;
 	}
