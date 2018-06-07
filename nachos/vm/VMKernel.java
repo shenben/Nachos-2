@@ -88,10 +88,10 @@ public class VMKernel extends UserKernel {
 
     System.out.println("***************** Getting page by evicting page ******************* %%%");
 
-    /*System.out.println("Checking invTable...");
+    System.out.println("Checking invTable...");
     for (int i = 0; i < numPhysPages; i++) {
       System.out.println("invTable[" + i + "].ppn = " + invTable[i].ppn);
-    }*/
+    }
     
     //int lp = lastPos;
     int index = pagesInMem.indexOf(lastPage);

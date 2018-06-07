@@ -17,6 +17,7 @@ public class VMProcess extends UserProcess {
 		super();
     VMKernel.addProcess(processID, this);
     expBytes = new HashMap<Integer, byte[]>();
+    System.out.println("!!! NEW PROCESS !!! w PID = " + processID);
 	}
 
 	/**
@@ -313,8 +314,6 @@ public class VMProcess extends UserProcess {
           // Load from SWAP if dirty
           if ((!pageTable[vpn].readOnly) && pageTable[vpn].dirty) {
             System.out.println("Loading from SWAP (code/data)");
-            System.out.println("RO status: " + pageTable[vpn].readOnly);
-            System.out.println("dirty status: " + pageTable[vpn].dirty);
             int spn = pageTable[vpn].vpn;
             if (spn == -1) {
               System.out.println("Trying to read from swap area that this VP does not map to");
