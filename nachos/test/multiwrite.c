@@ -23,7 +23,7 @@ int testMultiple() {
 	if( rJoin == 1 ) printf( "join r successfully\n" );
 	int lJoin = join( l, &i );
 	if( lJoin == 1 ) printf( "join l successfully\n" );
-	int kJoin = join( k, &i );
+	//int kJoin = join( k, &i );
   //if( kJoin == 1 ) printf( "join k successfully\n" );
 	//printf( "r has pid: %d, l has pid: %d, and k has pid: %d\n", r,l,k);
 	return 0;

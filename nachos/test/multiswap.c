@@ -13,10 +13,10 @@ int i = 0;
 int testMultiple() {
  // int r, l, k;
 	int childargc = 3;
-	char *childargv[3] = {"swap4.coff", "cp.c", "3",};
+	char *childargv[3] = {"matmult.coff", "cp.c", "3",};
 
-  r = exec( childargv[0], childargc, childargv );
-	l = exec( childargv[0], childargc, childargv );
+  r = exec( childargv[0], 1, childargv );
+	l = exec( childargv[0], 1, childargv );
 	//k = exec( childargv[0], childargc, childargv );
 
   int rJoin = join( r, &i );

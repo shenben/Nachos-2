@@ -26,6 +26,7 @@ public class VMKernel extends UserKernel {
 		if( freeSwapPages == null ) {
       freeSwapPages = new LinkedList<Integer>();
 			swapLock = new Lock();
+			swapFile = ThreadedKernel.fileSystem.open( swapFileName, true );
 		}
 		Machine.interrupt().restore(intStatus);
 	}
@@ -52,6 +53,9 @@ public class VMKernel extends UserKernel {
 	}
 
 	// dummy variables to make javac smarter
+	public static OpenFile swapFile;
+	public final String swapFileName = "swapeanut";
+
 	private static VMProcess dummy1 = null;
 
 	private static final char dbgVM = 'v';

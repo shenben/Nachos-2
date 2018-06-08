@@ -492,6 +492,8 @@ public class UserProcess {
 			}
 		}
 
+		PTLock = new Lock();
+
 //System.out.println( "We have in total " + numPages + " for PID " + this.processID);
 		return true;
 	}
@@ -692,7 +694,6 @@ public class UserProcess {
 		file.close();
 		fileTable[fileDescriptor] = null;
 		fileCount--;
-//System.err.println( this.processID + " PID We have " + fileCount + " file left." );
 
 		return 0;
 	}
@@ -712,6 +713,7 @@ public class UserProcess {
 	 * Handle the exec() system call.
 	 */
 	private int handleExec(int fileNameAddr, int argc, int argvAddr ) {
+
 	  String extCoff = ".coff";
     if( fileCount == maxOpenFiles ) return -1;
 		if( argc < 0 ) return -1;
@@ -719,7 +721,10 @@ public class UserProcess {
 
     // Load the file
 		String fileName = readVirtualMemoryString( fileNameAddr, maxLen );
-		if( fileName == null || fileName.length() <= extCoff.length()) return -1;
+		if( fileName == null || fileName.length() <= extCoff.length()) {
+		  System.out.println( "Fail to read the file name string." );
+		  return -1;
+		}
 
 		// Check the coff extension
 		String extension = fileName.substring( fileName.length() - extCoff.length(),
@@ -825,7 +830,6 @@ System.out.println( "child exited with " + childExitStat );
 		// can grade your implementation.
 		
 
-    System.out.println( "Exit status: " + status );
 		// Free up memories
 		returnPages();
 		// Close all the files
@@ -835,21 +839,27 @@ System.out.println( "child exited with " + childExitStat );
 				fileTable[i] = null;
 			}
 		}
-    // All the children goes to have no parent process
+   
+	 if( parentProcess != null ) {
+		  parentProcess.addChildExitStatus( this.processID, status );
+		 // parentProcess.deleteChildProcess( this.processID );
+		}
+	 
+	 // All the children goes to have no parent process
 		Iterator it = childProcesses.entrySet().iterator();
 		while( it.hasNext() ) {
       Map.Entry pair = (Map.Entry)it.next();
 			
 			((UserProcess)pair.getValue()).setParent( null );
+System.out.println( "Child process thats running: " + ((UserProcess)pair.getValue()).processID );
 		}
 
-		if( parentProcess != null ) {
-		  parentProcess.addChildExitStatus( this.processID, status );
-		 // parentProcess.deleteChildProcess( this.processID );
-		}
     if( UserKernel.decreaseProcess() == 0 ) Kernel.kernel.terminate();
 		exited = true;
+
+    System.out.println( "Process " + this.processID + " Exit status: " + status );
 		KThread.currentThread().finish();
+
 		return 0;
 	}
 
@@ -989,6 +999,7 @@ System.out.println( "child exited with " + childExitStat );
 
 	/** This process's page table. */
 	public TranslationEntry[] pageTable;
+	public Lock PTLock;
 
 	/** The number of contiguous pages occupied by the program. */
 	protected int numPages;
@@ -1033,11 +1044,13 @@ System.out.println( "child exited with " + childExitStat );
 	 * Return all the pages back to Kernel
 	 */
   protected int returnPages(){
+	  this.PTLock.acquire();
     for( int i = 0 ; i < numPages ; i++ ) {
-		  if( pageTable[i] != null )
+		  if( pageTable[i] != null && pageTable[i].valid )
         UserKernel.receiveOnePage( pageTable[i].ppn );
 				pageTable[i] = null;
 		}
+		this.PTLock.release();
 		return 0;
 	}
 
