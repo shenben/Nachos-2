@@ -755,10 +755,15 @@ public class UserProcess {
 
 		UserProcess childProcess = UserProcess.newUserProcess();
 		if( childProcess == null ) return -1;
+
+		UserKernel.processLock.acquire();
 		int id = UserKernel.increaseProcess();
+		UserKernel.processLock.release();
+
 		childProcess.setPID( id );
 		childProcess.setParent( this );
 		this.addChildProcess( id, childProcess );
+		UserKernel.addProcess( childProcess );
 
     Lib.assertTrue( childProcess.execute( fileName, argv ) );
 		return id;
@@ -820,6 +825,7 @@ System.out.println( "child exited with " + childExitStat );
 		// can grade your implementation.
 		
 
+    System.out.println( "Exit status: " + status );
 		// Free up memories
 		returnPages();
 		// Close all the files
@@ -982,7 +988,7 @@ System.out.println( "child exited with " + childExitStat );
 	protected Coff coff;
 
 	/** This process's page table. */
-	protected TranslationEntry[] pageTable;
+	public TranslationEntry[] pageTable;
 
 	/** The number of contiguous pages occupied by the program. */
 	protected int numPages;

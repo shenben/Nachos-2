@@ -89,8 +89,8 @@ int main() {
   //testWriteToFile();
 	//testWriteEmptyString();
 	//testWriteFromRead();
-	testWriteLargeFile();
-//	testWrite4();
+//	testWriteLargeFile();
+	testWrite4();
  // testArgCheck();
 	halt();
 }

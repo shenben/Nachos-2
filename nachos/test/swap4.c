@@ -20,6 +20,8 @@
 
 int bigbufnum = 16 * 1024 / sizeof (int);
 int bigbuf[16 * 1024 / sizeof (int)];
+//int bigbufnum = 16 * 16 / sizeof (int);
+//int bigbuf[16 * 16 / sizeof(int)];
 
 void
 init_buf ()
@@ -41,7 +43,7 @@ validate_buf ()
 	    // encode both the index and the bad data value in the status...
 	    int s = i * 1000 * 1000;
 	    s += bigbuf[i];
-printf( "The exit code is %d\n", s );
+//printf( "We are exiting at index %d\n", i );
 	    exit (s);
 	}
     }
@@ -55,6 +57,5 @@ main (int argc, char *argv[])
     validate_buf ();
     validate_buf ();
     validate_buf ();
-printf( "We succeeded!" );
     exit (-1000);
 }

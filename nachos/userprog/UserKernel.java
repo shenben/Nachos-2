@@ -37,12 +37,15 @@ public class UserKernel extends ThreadedKernel {
 		  freePhyPages = new LinkedList<Integer>();
       for( int i = 0 ; i < Machine.processor().getNumPhysPages(); i ++ ) {
         // Add each page to the table
-				freePhyPages.addFirst(i);
-			//	freePhyPages.add(i);
+				//freePhyPages.addFirst(i);
+				freePhyPages.add(i);
 			}
 		}
 		if( pageLock == null ) pageLock = new Lock();
 		if( processLock == null ) processLock = new Lock();
+		if( newProcLock == null ) newProcLock = new Lock();
+		if( allProcesses == null ) 
+		  allProcesses = new HashMap<Integer, UserProcess>();
 		Machine.interrupt().restore(intStatus);
 	}
 
@@ -109,9 +112,13 @@ public class UserKernel extends ThreadedKernel {
 		super.run();
 
 		UserProcess process = UserProcess.newUserProcess();
+		processLock.acquire();
 		process.setPID( numProcess );
 		increaseProcess();
 		ROOT = process;
+		processLock.release();
+
+		this.addProcess( process );
 
 		String shellProgram = Machine.getShellProgramName();
 		Lib.assertTrue(process.execute(shellProgram, new String[] {}));
@@ -133,8 +140,8 @@ public class UserKernel extends ThreadedKernel {
 	private static Coff dummy1 = null;
 
   /** To keep track of how many free pages there are */
-	private static LinkedList<Integer> freePhyPages;
-	private static Lock pageLock;
+	protected static LinkedList<Integer> freePhyPages;
+	protected static Lock pageLock;
 	// Helper functions
   public static int getNumFreePages() {
     int pageNum = freePhyPages.size();
@@ -178,15 +185,15 @@ public class UserKernel extends ThreadedKernel {
 	}
 
   /** To handle multiprocess */
-	protected static Lock processLock;
+	public static Lock processLock;
 	protected static int numProcess = 0;
 	protected static int nextID = 0;
 	public static UserProcess ROOT;
 	public static int increaseProcess() {
-	  processLock.acquire();
+	  //processLock.acquire();
     numProcess++;
 		nextID ++;
-		processLock.release();
+		//processLock.release();
 		return nextID;
 	}
 	public static int getNumProcess(){
@@ -197,5 +204,14 @@ public class UserKernel extends ThreadedKernel {
 		numProcess--;
 		processLock.release();
 		return numProcess;
+	}
+
+	public static HashMap<Integer, UserProcess> allProcesses;
+  public static Lock newProcLock;
+
+	public static void addProcess( UserProcess process ){
+    newProcLock.acquire();
+		allProcesses.put( process.processID, process);
+		newProcLock.release();
 	}
 }

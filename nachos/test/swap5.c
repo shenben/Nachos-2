@@ -58,6 +58,5 @@ main (int argc, char *argv[])
     validate_buf (100 * 1000);
     write_buf (200 * 1000);
     validate_buf (200 * 1000);
-printf( "We succeeded!\n" );
     exit (-1000);
 }
