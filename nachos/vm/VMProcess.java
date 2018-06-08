@@ -17,6 +17,7 @@ public class VMProcess extends UserProcess {
 		super();
     expBytes = new HashMap<Integer, byte[]>();
     lock = new Lock();
+    faultLock = new Lock();
 	}
 
 	/**
@@ -84,40 +85,61 @@ public class VMProcess extends UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
-    // TODO pin
-
+    // Lock
+    lock.acquire();
+    // Pin
     int vPageBegin = vaddr / pageSize;
+		int pPageBegin = pageTable[vPageBegin].ppn;
+    VMKernel.pinnedPages.add((Integer) pPageBegin);
+
     if (!pageTable[vPageBegin].valid) handlePageFault(vaddr);
+
+    if (pPageBegin == -1) {
+      pPageBegin = pageTable[vPageBegin].ppn;
+    }
+
     System.out.println("*******   Reading from VP " + vPageBegin);
 
-    lock.acquire();
+    // Break the length into pages
+		int pageLoc = vaddr % pageSize;
+		int paddr = pPageBegin * pageSize + pageLoc;
 
 		byte[] memory = Machine.processor().getMemory();
 
-		if ( vaddr < 0 ) {//|| vaddr >= memory.length) {
+		if ( vaddr < 0 ) { //|| vaddr >= memory.length) {
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("vaddr ==== " + vaddr);
       System.out.println("0");
       return -1;
     }
 
     int bytesRead = 0;
-    // Break the length into pages
-		int pageLoc = vaddr % pageSize;
 
 		// Check the physical address makes sens
 		if( vPageBegin >= numPages || 
 		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ) {
-     lock.release();
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
+      lock.release();
+
       System.out.println("1");
-		 return -1;
+		  return -1;
     }
 
-		int pPageBegin = pageTable[vPageBegin].ppn;
-		int paddr = pPageBegin * pageSize + pageLoc;
-
     if( paddr < 0 || paddr >= memory.length ) {
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("2");
       return -1;
     }
@@ -130,7 +152,12 @@ public class VMProcess extends UserProcess {
 			pageTable[vPageBegin].used = true;
       // Update InvTable
       VMKernel.invTable[pPageBegin].used = true;
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("3");
 			return length;
 		}
@@ -139,21 +166,35 @@ public class VMProcess extends UserProcess {
 		  // The first part
       System.arraycopy(memory, paddr, data, offset, firstPageLeft );
       bytesRead += firstPageLeft;
+      // Unpin first page
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
       
 			// Middle part
 			int remainBytes = length - firstPageLeft;
 			int readPages = vPageBegin + 1;
+      // Pin new page
+      VMKernel.pinnedPages.add((Integer) readPages);
 			offset += (firstPageLeft );
 			if( readPages >= numPages || offset > length ) {
+        // Unpin new page
+        VMKernel.pinnedPages.remove((Integer) readPages);
+        VMKernel.unpinnedPage.wake();
+        // Unlock
         lock.release();
-      System.out.println("4");
+
+        System.out.println("4");
         return remainBytes;
       }
 			while( remainBytes > pageSize ) {
 			  // Error
 			  if( pageTable[readPages] == null || !pageTable[readPages].valid ) {
+          // Unpin new page
+          VMKernel.pinnedPages.remove((Integer) readPages);
+          VMKernel.unpinnedPage.wake();
+          // Unlock
           lock.release();
-      System.out.println("5");
+
+          System.out.println("5");
 				  return (length - remainBytes);
         }
 
@@ -169,7 +210,12 @@ public class VMProcess extends UserProcess {
 				// Update the address and offset
 				remainBytes -= pageSize;
 				offset += (pageSize);
+
+        // Unpin new page
+        VMKernel.pinnedPages.remove((Integer) readPages);
 				readPages++;
+        // Pin next page
+        VMKernel.pinnedPages.add((Integer) readPages);
 			}
 			
 			// The final part
@@ -181,7 +227,12 @@ public class VMProcess extends UserProcess {
       int pPageRead = pageTable[readPages].ppn;
       VMKernel.invTable[pPageRead].used = true;
 			remainBytes = 0;
+      // Unpin last page
+      VMKernel.pinnedPages.remove((Integer) readPages);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("6");
 			return bytesRead;
 		}
@@ -199,21 +250,34 @@ public class VMProcess extends UserProcess {
   	Lib.assertTrue(offset >= 0 && length >= 0
 				&& offset + length <= data.length);
 
-    // TODO pin
-
+    // Lock
+    lock.acquire();
+    // Pin
     int vPageBegin = vaddr / pageSize;
+		int pPageBegin = pageTable[vPageBegin].ppn;
+    VMKernel.pinnedPages.add((Integer) pPageBegin);
+
     if (!pageTable[vPageBegin].valid) handlePageFault(vaddr);
 
-    System.out.println("*******   Writing to VP " + vPageBegin);
-    lock.acquire();
+    if (pPageBegin == -1) {
+      pPageBegin = pageTable[vPageBegin].ppn;
+    }
 
+    System.out.println("*******   Writing to VP " + vPageBegin);
+
+		int pageLoc = vaddr % pageSize;
+		int paddr = pPageBegin * pageSize + pageLoc;
     int bytesRead = 0;
 		byte[] memory = Machine.processor().getMemory();
 
     // Break the length into pages
-		int pageLoc = vaddr % pageSize;
     if( vPageBegin >= numPages ) {
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("invalid VA");
       return 0;
     }
@@ -221,17 +285,24 @@ public class VMProcess extends UserProcess {
 		// Check the physical address makes sens
 		if( pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ||
 				pageTable[vPageBegin].readOnly ) {
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("bad PA");
 		  return -1;
     }
 
-		int pPageBegin = pageTable[vPageBegin].ppn;
-		int paddr = pPageBegin * pageSize + pageLoc;
-
     //System.out.println( "Now the paddr is at " + paddr );
 		if( paddr < 0 || paddr >= memory.length ) {
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("invalid PA");
       return 0;
     }
@@ -246,7 +317,12 @@ public class VMProcess extends UserProcess {
       // Update InvTable
       VMKernel.invTable[pPageBegin].used = true;
       VMKernel.invTable[pPageBegin].dirty = true;
+      // Unpin
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("ONe page");
 			return length;
 		}
@@ -260,21 +336,35 @@ public class VMProcess extends UserProcess {
       VMKernel.invTable[pPageBegin].used = true;
       VMKernel.invTable[pPageBegin].dirty = true;
 			bytesRead += firstPageLeft;
+      // Unpin first page
+      VMKernel.pinnedPages.remove((Integer) pPageBegin);
 
 			// Middle part
 			int remainBytes = length - firstPageLeft;
 			offset += (firstPageLeft);
 			int pageRead = vPageBegin + 1;
+      // Pin new page
+      VMKernel.pinnedPages.add((Integer) pageRead);
 			if( pageRead >= numPages || offset > length ) {
+        // Unpin new page
+        VMKernel.pinnedPages.remove((Integer) pageRead);
+        VMKernel.unpinnedPage.wake();
+        // Unlock
         lock.release();
-        System.out.println("MIDDLE");
+
+        System.out.println("bad new page num");
         return remainBytes;
       }
 			while( remainBytes > pageSize ) {
 				// Error
 				if( pageTable[pageRead] == null || pageTable[pageRead].readOnly || 
 				    !pageTable[pageRead].valid ) {
+          // Unpin new page
+          VMKernel.pinnedPages.remove((Integer) pageRead);
+          VMKernel.unpinnedPage.wake();
+          // Unlock
           lock.release();
+
           System.out.println("error part");
 				  return length - remainBytes;
         }
@@ -293,7 +383,11 @@ public class VMProcess extends UserProcess {
 				// Update the address and offset
 				remainBytes -= pageSize;
 				offset += (pageSize);
+        // Unpin new page
+        VMKernel.pinnedPages.remove((Integer) pageRead);
 				pageRead++;
+        // Pin next page
+        VMKernel.pinnedPages.add((Integer) pageRead);
 			}
 			
 			// The final part
@@ -303,7 +397,12 @@ public class VMProcess extends UserProcess {
 			pageTable[pageRead].used = true;
 			bytesRead += remainBytes;
 			remainBytes = 0;
+      // Unpin last page
+      VMKernel.pinnedPages.remove((Integer) pageRead);
+      VMKernel.unpinnedPage.wake();
+      // Unlock
       lock.release();
+
       System.out.println("END OF WVM");
 			return bytesRead;
 		}
@@ -317,7 +416,7 @@ public class VMProcess extends UserProcess {
 
     System.out.println("ENTERING HANDLER ***************");
 
-    lock.acquire();
+    faultLock.acquire();
 
     System.out.println("faddr: " + faddr);
 
@@ -329,6 +428,7 @@ public class VMProcess extends UserProcess {
     ppn = VMKernel.evictPage();
 
     if (ppn == -1) {
+      faultLock.release();
       System.out.println("Swapping out failed");
       return -1; 
     }
@@ -365,6 +465,7 @@ public class VMProcess extends UserProcess {
             System.out.println("Loading from SWAP (code/data)");
             int spn = pageTable[vpn].vpn;
             if (spn == -1) {
+              faultLock.release();
               System.out.println("Trying to read from swap area that this VP does not map to");
               return -1;
             }
@@ -376,6 +477,7 @@ public class VMProcess extends UserProcess {
             }
             byte[] exp = expBytes.get(vpn);
             if (exp == null) {
+              faultLock.release();
               System.out.println("trying to read in wrong context, vpn = " + vpn);
               return -1;
             }
@@ -417,6 +519,7 @@ public class VMProcess extends UserProcess {
         System.out.println("Loading from SWAP (stack/args)");
         int spn = pageTable[vpn].vpn;
         if (spn == -1) {
+          faultLock.release();
           System.out.println("Trying to read from swap area that this VP does not map to");
           return -1;
         }
@@ -428,6 +531,7 @@ public class VMProcess extends UserProcess {
         }
         byte[] exp = expBytes.get(vpn);
         if (exp == null) {
+          faultLock.release();
           System.out.println("trying to read in wrong context");
           return -1;
         }
@@ -478,7 +582,7 @@ public class VMProcess extends UserProcess {
     System.out.println("pT["+vpn+"].used               = " + pageTable[vpn].used);
     System.out.println("-----------");
 
-    lock.release();
+    faultLock.release();
 
     System.out.println("EXITING HANDLER ***************");
 
@@ -519,6 +623,7 @@ public class VMProcess extends UserProcess {
   public static HashMap<Integer, byte[]> expBytes;
 
   private Lock lock;
+  private Lock faultLock;
 
   /** Given. */
 	private static final int pageSize = Processor.pageSize;

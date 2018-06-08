@@ -40,7 +40,8 @@ public class VMKernel extends UserKernel {
     }
     pagesInMem = new LinkedList<Integer>();
     processMap = new HashMap();
-    //lock = new Lock();
+    pinnedPages = new LinkedList<Integer>();
+    unpinnedPage = new Condition(processLock);
 	}
 
 	/**
@@ -99,9 +100,7 @@ public class VMKernel extends UserKernel {
       System.out.println("invTable[" + i + "].ppn = " + invTable[i].ppn);
     }
     
-    //processLock.acquire();
     int index = pagesInMem.indexOf(lastPage);
-    //processLock.release();
     if (index == -1) {
       System.out.println("Resetting index");
       index = 0;
@@ -111,10 +110,8 @@ public class VMKernel extends UserKernel {
     do {
       System.out.println("Clock alg INDEX ==== " + index);
       // if (pinned) continue; // update index
-      //processLock.acquire();
       Integer ppn = pagesInMem.get(index);
       int pid = VMKernel.invTable[ppn].ppn;
-      //processLock.release();
 
       System.out.println("###### BEFORE - Checking this pages ITE.......");
       System.out.println("-----------");
@@ -197,7 +194,8 @@ public class VMKernel extends UserKernel {
       index = (++index) % numPhysPages;
     } while (index != front);
 
-    // delay request CV
+    // Delay request with CV
+    //unpinnedPage.sleep();
 
     processLock.release();
 
@@ -255,6 +253,9 @@ public class VMKernel extends UserKernel {
 
   public static HashMap<Integer, VMProcess> processMap;
 
+  public static LinkedList<Integer> pinnedPages;
+
+  public static Condition unpinnedPage;
   //private static Lock lock;
   //private Lock macroLock;
 }
