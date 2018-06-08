@@ -15,9 +15,8 @@ public class VMProcess extends UserProcess {
 	 */
 	public VMProcess() {
 		super();
-    VMKernel.addProcess(processID, this);
     expBytes = new HashMap<Integer, byte[]>();
-    System.out.println("!!! NEW PROCESS !!! w PID = " + processID);
+    lock = new Lock();
 	}
 
 	/**
@@ -44,10 +43,15 @@ public class VMProcess extends UserProcess {
 	 */
 	protected boolean loadSections() {
     System.out.println("numPages for process = " + numPages);
+    System.out.println("!!! NEW PROCESS !!! w PID = " + processID);
+    lock.acquire();
+    VMKernel.addProcess(processID, this);
+    System.out.println("numproc = " + VMKernel.processMap.size());
     pageTable = new TranslationEntry[numPages];
 		for( int i = 0 ; i < numPages ; i++ ) {
       pageTable[i] = new TranslationEntry(-1, -1, false, false, false, false);
 		}
+    lock.release();
     return true;
 	}
 
@@ -56,6 +60,7 @@ public class VMProcess extends UserProcess {
 	 */
 	protected void unloadSections() {
     if (pageTable == null) return; 
+    lock.acquire();
     for( int i = 0 ; i < numPages ; i++ ) {
 		  if( pageTable[i] != null ) {
         UserKernel.receiveOnePage( pageTable[i].ppn );
@@ -63,6 +68,7 @@ public class VMProcess extends UserProcess {
       }
 		}
     VMKernel.removeProcess(processID);
+    lock.release();
 		return;
 	}
 
@@ -81,13 +87,19 @@ public class VMProcess extends UserProcess {
     // TODO pin
 
     int vPageBegin = vaddr / pageSize;
-    if (!pageTable[vPageBegin].valid) return handlePageFault(vaddr);
-
+    if (!pageTable[vPageBegin].valid) handlePageFault(vaddr);
     System.out.println("*******   Reading from VP " + vPageBegin);
+
+    lock.acquire();
 
 		byte[] memory = Machine.processor().getMemory();
 
-		if ( vaddr < 0 || vaddr >= memory.length) return -1;
+		if ( vaddr < 0 ) {//|| vaddr >= memory.length) {
+      lock.release();
+      System.out.println("vaddr ==== " + vaddr);
+      System.out.println("0");
+      return -1;
+    }
 
     int bytesRead = 0;
     // Break the length into pages
@@ -95,13 +107,20 @@ public class VMProcess extends UserProcess {
 
 		// Check the physical address makes sens
 		if( vPageBegin >= numPages || 
-		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid )
+		    pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ) {
+     lock.release();
+      System.out.println("1");
 		 return -1;
+    }
 
 		int pPageBegin = pageTable[vPageBegin].ppn;
 		int paddr = pPageBegin * pageSize + pageLoc;
 
-    if( paddr < 0 || paddr >= memory.length ) return -1;
+    if( paddr < 0 || paddr >= memory.length ) {
+      lock.release();
+      System.out.println("2");
+      return -1;
+    }
 
 		// First part of the bytes
 		int firstPageLeft = pageSize - pageLoc;
@@ -111,6 +130,8 @@ public class VMProcess extends UserProcess {
 			pageTable[vPageBegin].used = true;
       // Update InvTable
       VMKernel.invTable[pPageBegin].used = true;
+      lock.release();
+      System.out.println("3");
 			return length;
 		}
 		// When the bits ends beyong this page
@@ -123,11 +144,18 @@ public class VMProcess extends UserProcess {
 			int remainBytes = length - firstPageLeft;
 			int readPages = vPageBegin + 1;
 			offset += (firstPageLeft );
-			if( readPages >= numPages || offset > length ) return remainBytes;
+			if( readPages >= numPages || offset > length ) {
+        lock.release();
+      System.out.println("4");
+        return remainBytes;
+      }
 			while( remainBytes > pageSize ) {
 			  // Error
-			  if( pageTable[readPages] == null || !pageTable[readPages].valid ) 
+			  if( pageTable[readPages] == null || !pageTable[readPages].valid ) {
+          lock.release();
+      System.out.println("5");
 				  return (length - remainBytes);
+        }
 
 				// Set the page's attributes
 				pageTable[readPages].used = true;
@@ -153,6 +181,8 @@ public class VMProcess extends UserProcess {
       int pPageRead = pageTable[readPages].ppn;
       VMKernel.invTable[pPageRead].used = true;
 			remainBytes = 0;
+      lock.release();
+      System.out.println("6");
 			return bytesRead;
 		}
 	}
@@ -172,27 +202,39 @@ public class VMProcess extends UserProcess {
     // TODO pin
 
     int vPageBegin = vaddr / pageSize;
-    if (!pageTable[vPageBegin].valid) return handlePageFault(vaddr);
+    if (!pageTable[vPageBegin].valid) handlePageFault(vaddr);
 
     System.out.println("*******   Writing to VP " + vPageBegin);
+    lock.acquire();
 
     int bytesRead = 0;
 		byte[] memory = Machine.processor().getMemory();
 
     // Break the length into pages
 		int pageLoc = vaddr % pageSize;
-    if( vPageBegin >= numPages ) return 0;
+    if( vPageBegin >= numPages ) {
+      lock.release();
+      System.out.println("invalid VA");
+      return 0;
+    }
 
 		// Check the physical address makes sens
 		if( pageTable[vPageBegin] == null || !pageTable[vPageBegin].valid ||
-				pageTable[vPageBegin].readOnly ) 
+				pageTable[vPageBegin].readOnly ) {
+      lock.release();
+      System.out.println("bad PA");
 		  return -1;
+    }
 
 		int pPageBegin = pageTable[vPageBegin].ppn;
 		int paddr = pPageBegin * pageSize + pageLoc;
 
     //System.out.println( "Now the paddr is at " + paddr );
-		if( paddr < 0 || paddr >= memory.length ) return 0;
+		if( paddr < 0 || paddr >= memory.length ) {
+      lock.release();
+      System.out.println("invalid PA");
+      return 0;
+    }
 
 		// First part of the bytes
 		int firstPageLeft = pageSize - pageLoc;
@@ -204,6 +246,8 @@ public class VMProcess extends UserProcess {
       // Update InvTable
       VMKernel.invTable[pPageBegin].used = true;
       VMKernel.invTable[pPageBegin].dirty = true;
+      lock.release();
+      System.out.println("ONe page");
 			return length;
 		}
 		// When the bits ends beyong this page
@@ -221,12 +265,19 @@ public class VMProcess extends UserProcess {
 			int remainBytes = length - firstPageLeft;
 			offset += (firstPageLeft);
 			int pageRead = vPageBegin + 1;
-			if( pageRead >= numPages || offset > length ) return remainBytes;
+			if( pageRead >= numPages || offset > length ) {
+        lock.release();
+        System.out.println("MIDDLE");
+        return remainBytes;
+      }
 			while( remainBytes > pageSize ) {
 				// Error
 				if( pageTable[pageRead] == null || pageTable[pageRead].readOnly || 
-				    !pageTable[pageRead].valid ) 
+				    !pageTable[pageRead].valid ) {
+          lock.release();
+          System.out.println("error part");
 				  return length - remainBytes;
+        }
 
 				// Set the page's attribute
 				pageTable[pageRead].used = true;
@@ -249,10 +300,11 @@ public class VMProcess extends UserProcess {
 			paddr = pageTable[pageRead].ppn * pageSize;
       //System.out.println( "after the first two parts the paddr is " + paddr );
 			System.arraycopy( data, offset, memory, paddr, remainBytes );
-			pageTable[vPageBegin].used = true; // TODO pageRead instead of vPageBegin??
-			pageTable[vPageBegin].used = false;
+			pageTable[pageRead].used = true;
 			bytesRead += remainBytes;
 			remainBytes = 0;
+      lock.release();
+      System.out.println("END OF WVM");
 			return bytesRead;
 		}
 	}
@@ -262,7 +314,10 @@ public class VMProcess extends UserProcess {
    */
   private int handlePageFault(int faddr) {
     if (faddr < 0 || faddr >= (numPages * pageSize)) return -1;
+
     System.out.println("ENTERING HANDLER ***************");
+
+    lock.acquire();
 
     System.out.println("faddr: " + faddr);
 
@@ -270,19 +325,13 @@ public class VMProcess extends UserProcess {
     int vpn = faddr / pageSize;
     int ppn = -1;
 
-    //System.out.println("pageTable[vpn].valid = " + pageTable[vpn].valid);
-
     // Get a physical page
     ppn = VMKernel.evictPage();
 
     if (ppn == -1) {
-      System.out.println("No available pages to swap out!");
+      System.out.println("Swapping out failed");
       return -1; 
     }
-
-    System.out.println("vpn = " + vpn);
-    /*System.out.println("ppn = " + ppn);
-    System.out.println("processID = " + processID);*/
 
     System.out.println("~~~~~~ PT for Process " + processID + " BEFORE ~~~~~~");
     System.out.println("pT["+vpn+"].spn                = " + pageTable[vpn].vpn);
@@ -298,12 +347,12 @@ public class VMProcess extends UserProcess {
     System.out.println("pT["+vpn+"].used               = " + pageTable[vpn].used);
     System.out.println("-----------");
 
+    VMKernel.trackPhysPage(ppn);
+    System.out.println("TRACKING PAGE " + ppn);
+
     // Load page into memory
     boolean loaded = false;
-    //if (!pageTable[vpn].dirty) {
-      pageTable[vpn].ppn = ppn;
-      //pageTable[vpn].readOnly = false;
-    //}
+    pageTable[vpn].ppn = ppn;
     // Loop through COFF Sections to determine if load from here
     for (int s = 0; s < numCoff; s++) {
       CoffSection section = coff.getSection(s);
@@ -345,7 +394,16 @@ public class VMProcess extends UserProcess {
               System.out.println("Setting to READONLY");
               pageTable[vpn].readOnly = true;
             }
+            byte[] b = Machine.processor().getMemory();
+            /*System.out.println("before loading ...");
+            for (int k = 0; k < pageSize; k++) {
+              System.out.print("" + b[(97* pageSize) + k] + ", ");
+            }*/
             section.loadPage(i, pageTable[vpn].ppn);
+            /*System.out.println("after loading ...");
+            for (int k = 0; k < pageSize; k++) {
+              System.out.print("" + b[(97* pageSize) + k] + ", ");
+            }*/
             break;
           }
         }
@@ -390,7 +448,8 @@ public class VMProcess extends UserProcess {
       }
     }
 
-    VMKernel.trackPhysPage(ppn);
+    //VMKernel.trackPhysPage(ppn);
+    //System.out.println("TRACKING PAGE " + ppn);
 
     // Mark page as valid
     pageTable[vpn].valid = true;
@@ -418,6 +477,8 @@ public class VMProcess extends UserProcess {
     System.out.println("-----------");
     System.out.println("pT["+vpn+"].used               = " + pageTable[vpn].used);
     System.out.println("-----------");
+
+    lock.release();
 
     System.out.println("EXITING HANDLER ***************");
 
@@ -456,6 +517,8 @@ public class VMProcess extends UserProcess {
   }
 
   public static HashMap<Integer, byte[]> expBytes;
+
+  private Lock lock;
 
   /** Given. */
 	private static final int pageSize = Processor.pageSize;

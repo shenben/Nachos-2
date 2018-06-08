@@ -40,6 +40,7 @@ public class VMKernel extends UserKernel {
     }
     pagesInMem = new LinkedList<Integer>();
     processMap = new HashMap();
+    //lock = new Lock();
 	}
 
 	/**
@@ -83,28 +84,37 @@ public class VMKernel extends UserKernel {
     if (pagesInMem.size() != numPhysPages) {
       System.out.println("Memory should be filled, only has " + pagesInMem.size()
           + " out of " + numPhysPages);
+      for (int i = 0; i < pagesInMem.size(); i++) {
+        System.out.println("page @ " + i+ " = " + pagesInMem.get(i));
+      }
       return -1;
     }
 
     System.out.println("***************** Getting page by evicting page ******************* %%%");
+
+    processLock.acquire();
 
     System.out.println("Checking invTable...");
     for (int i = 0; i < numPhysPages; i++) {
       System.out.println("invTable[" + i + "].ppn = " + invTable[i].ppn);
     }
     
-    //int lp = lastPos;
+    //processLock.acquire();
     int index = pagesInMem.indexOf(lastPage);
+    //processLock.release();
     if (index == -1) {
       System.out.println("Resetting index");
       index = 0;
     }
     int front = index;
+
     do {
       System.out.println("Clock alg INDEX ==== " + index);
-      // if (pinned) continue;
-      Integer ppn = pagesInMem.get(index); //FIXME shifting of the linkedlist? 
+      // if (pinned) continue; // update index
+      //processLock.acquire();
+      Integer ppn = pagesInMem.get(index);
       int pid = VMKernel.invTable[ppn].ppn;
+      //processLock.release();
 
       System.out.println("###### BEFORE - Checking this pages ITE.......");
       System.out.println("-----------");
@@ -122,17 +132,20 @@ public class VMKernel extends UserKernel {
       System.out.println("-----------");
 
       if (!invTable[ppn].used) {
+        //processLock.acquire();
         VMProcess vmp = processMap.get(pid);
         if (vmp == null) {
           System.out.println("ppn = " + ppn);
           System.out.println("Process " + pid + " was not inserted into processMap");
           System.out.println("Size of processMap = " + processMap.size());
+          System.out.println("item = " + processMap.get(0));
           return -1;
         }
         TranslationEntry[] pt = vmp.getPageTable();
+        //processLock.release();
         if (!invTable[ppn].readOnly && invTable[ppn].dirty) {
           // Request swap page
-          int spn = getSwapPage(); //FIXME shifting of the linkedlist? 
+          int spn = getSwapPage(); //locked
           if (spn == -1) {
             System.out.println("no more free swap pages :(");
             return -1;
@@ -156,6 +169,7 @@ public class VMKernel extends UserKernel {
         pt[invTable[ppn].vpn].valid = false;
         vmp.setPageTable(pt);
         untrackPhysPage(ppn); // reduces size of pagesInMem
+        System.out.println("UNTRACKING PAGE " + ppn);
 
         System.out.println("Evicting page mapped to VP - " + invTable[ppn].vpn);
         System.out.println("###### AFTER - Checking this pages ITE.......");
@@ -175,6 +189,7 @@ public class VMKernel extends UserKernel {
         
         index = (++index) % pagesInMem.size();//numPhysPages;
         lastPage = pagesInMem.get(index);
+        processLock.release();
         return ppn;
       } else {
         invTable[ppn].used = false;
@@ -182,16 +197,21 @@ public class VMKernel extends UserKernel {
       index = (++index) % numPhysPages;
     } while (index != front);
 
-    // TODO delay request CV
+    // delay request CV
+
+    processLock.release();
 
     return -1;
   }
 
   private static int getSwapPage() {
+    //processLock.acquire();
     if (freeSwapPages.size() <= 0) {
       freeSwapPages.add(numSwapPages++);
     }
-    return (int) freeSwapPages.remove();
+    int val = (int) freeSwapPages.remove();
+    //processLock.release();
+    return val;
   }
 
   public static void addProcess(Integer pid, VMProcess vmp) {
@@ -233,5 +253,8 @@ public class VMKernel extends UserKernel {
 
 	private static final int pageSize = Processor.pageSize;
 
-  private static HashMap<Integer, VMProcess> processMap;
+  public static HashMap<Integer, VMProcess> processMap;
+
+  //private static Lock lock;
+  //private Lock macroLock;
 }

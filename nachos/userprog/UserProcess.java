@@ -362,6 +362,7 @@ public class UserProcess {
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
 			Lib.debug(dbgProcess, "\topen failed");
+      System.out.println("open failed");
 			return false;
 		}
 
@@ -371,6 +372,7 @@ public class UserProcess {
 		catch (EOFException e) {
 			executable.close();
 			Lib.debug(dbgProcess, "\tcoff load failed");
+      System.out.println("coff load failed");
 			return false;
 		}
 
@@ -381,6 +383,7 @@ public class UserProcess {
 			if (section.getFirstVPN() != numPages) {
 				coff.close();
 				Lib.debug(dbgProcess, "\tfragmented executable");
+        System.out.println("fragmented exec");
 				return false;
 			}
 			numPages += section.getLength();
@@ -397,6 +400,7 @@ public class UserProcess {
 		if (argsSize > pageSize) {
 			coff.close();
 			Lib.debug(dbgProcess, "\targuments too long");
+      System.out.println("args too long");
 			return false;
 		}
 
@@ -412,6 +416,8 @@ public class UserProcess {
 
 		if (!loadSections())
 			return false;
+
+    System.out.println("loadSections returns true");
 
 		// store arguments in last page
 		int entryOffset = (numPages - 1) * pageSize;
@@ -429,6 +435,8 @@ public class UserProcess {
 			Lib.assertTrue(writeVirtualMemory(stringOffset, new byte[] { 0 }) == 1);
 			stringOffset += 1;
 		}
+    
+    System.out.println("at end");
 
 		return true;
 	}
@@ -466,6 +474,7 @@ public class UserProcess {
 		if( numPages > UserKernel.getNumFreePages() ) {
       coff.close();
 			Lib.debug( dbgProcess, "\tinsufficient physical memory." );
+      System.out.println("unsufficient phys mem");
 			return false;
 		}
 
@@ -475,6 +484,7 @@ public class UserProcess {
       if( requestOnePage(i) == -1 ){
         returnPages();
 				coff.close();
+        System.out.println("not enough pages");
 				return false;
 			}
 		}
@@ -712,16 +722,26 @@ public class UserProcess {
 	 * Handle the exec() system call.
 	 */
 	private int handleExec(int fileNameAddr, int argc, int argvAddr ) {
+    System.out.println("IN EXEC HANDLER");
 	  String extCoff = ".coff";
-    if( fileCount == maxOpenFiles ) return -1;
+    if( fileCount == maxOpenFiles ) {
+      System.out.println("1");
+      return -1;
+    }
 		if( argc < 0 ) return -1;
+    System.out.println("2");
 		if( argvAddr < 0 || argvAddr > numPages * pageSize ) return -1;
 
     // Load the file
+    System.out.println("3");
 		String fileName = readVirtualMemoryString( fileNameAddr, maxLen );
+    System.out.println("name addr: " + fileNameAddr);
+    System.out.println("fn: " + fileName);
+    System.out.println("is null? " + (fileName == null));
 		if( fileName == null || fileName.length() <= extCoff.length()) return -1;
 
 		// Check the coff extension
+    System.out.println("4");
 		String extension = fileName.substring( fileName.length() - extCoff.length(),
 		                                       fileName.length());
 		if( !extension.equals( extCoff )) return -1;
@@ -729,6 +749,7 @@ public class UserProcess {
     // Try open the file. If the file is not openable, then return -1
 
     //if( ThreadedKernel.fileSystem.open( fileName, false) == null ) return -1;
+    System.out.println("MADE IT THIS FAR");
 
 
 		// Get all the args

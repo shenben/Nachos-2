@@ -156,6 +156,7 @@ public class UserKernel extends ThreadedKernel {
 		}
 
 		int availPage = freePhyPages.pop();
+    System.out.println("Available page is page #" + availPage);
     pageLock.release();
 		return availPage;
 	}
@@ -178,7 +179,7 @@ public class UserKernel extends ThreadedKernel {
 	}
 
   /** To handle multiprocess */
-	private static Lock processLock;
+	public static Lock processLock;
 	private static int numProcess = 0;
 	private static int nextID = 0;
 	public static UserProcess ROOT;
