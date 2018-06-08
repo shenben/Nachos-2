@@ -27,6 +27,7 @@ public class VMProcess extends UserProcess {
 				                                             false );
 			}
 			clockHand = 0;
+			swapFile = ThreadedKernel.fileSystem.open( swapFileName, true );
 		}
 	}
 
@@ -83,8 +84,8 @@ public class VMProcess extends UserProcess {
 
 			pageTable[vPageBegin].used = true;
 			invertedPageTable[ pageTable[vPageBegin].ppn ].used = true;
-System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 			return length;
 		}
@@ -109,8 +110,8 @@ pageTable[vPageBegin].ppn + " to used too" );
 
 				pageTable[readPages].used = true;
 				invertedPageTable[ pageTable[readPages].ppn ].used = true;
-System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 
 				paddr = pageTable[readPages].ppn * pageSize;
@@ -135,8 +136,8 @@ pageTable[vPageBegin].ppn + " to used too" );
 
 			pageTable[readPages].used = true;
 			invertedPageTable[ pageTable[readPages].ppn ].used = true;
-System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 
 			remainBytes = 0;
@@ -206,8 +207,8 @@ pageTable[vPageBegin].ppn + " to used too" );
       int p = pageTable[vPageBegin].ppn;
 			invertedPageTable[p].used = true;
 			invertedPageTable[p].dirty = true;
-System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 
 			return length;
@@ -222,8 +223,8 @@ pageTable[vPageBegin].ppn + " to used too" );
 			int p = pageTable[vPageBegin].ppn;
 			invertedPageTable[p].used = true;
 			invertedPageTable[p].dirty = true;
-	System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//	System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 		
 			bytesRead += firstPageLeft;
@@ -270,8 +271,8 @@ pageTable[vPageBegin].ppn + " to used too" );
       p = pageTable[pageRead].ppn;
 			invertedPageTable[p].used = true;
 			invertedPageTable[p].dirty = true;
-System.out.println("Setting " + vPageBegin + " virtual to used and " + 
-pageTable[vPageBegin].ppn + " to used too" );
+//System.out.println("Setting " + vPageBegin + " virtual to used and " + 
+//pageTable[vPageBegin].ppn + " to used too" );
 
 
 			bytesRead += remainBytes;
@@ -353,18 +354,20 @@ pageTable[vPageBegin].ppn + " to used too" );
 
 	private int clockHand;
 	public final String swapFileName = "swapeanut";
+  OpenFile swapFile;
 
 	// Inverted page table for relating physical pages with processes
 	protected static TranslationEntry[] invertedPageTable;
 
 	protected int handlePageFault(int faultAddr) {
 
+//System.out.println( "Faulting on " + faultAddr/pageSize );
 /*****************************/
 /*System.out.println("page table");
 for( int i = 0 ; i < numPages ; i++ ) {
 TranslationEntry t = pageTable[i];
 System.out.println( t.vpn + " " + t.ppn + " " + t.valid + " " + t.dirty + " "
-+ t.used );
++ t.used + " " + t.readOnly);
 }
 System.out.println( "Inverted page table" );
 for( int i = 0 ; i < invertedPageTable.length ; i++ ) {
@@ -384,29 +387,43 @@ System.out.println( t.vpn + " " + t.ppn + " " + t.valid + " " + t.dirty + " "
     // Get the page number where fault happened
 		int faultPage = faultAddr / pageSize;
 //System.out.println( "We are faulting on page " + faultPage + " that is mapped to "
-  //                 + phyPage + " physical page." );
+                 //  + phyPage + " physical page." );
     // Map the virtual page to the actual physical page
     pageTable[faultPage].ppn = phyPage;
 		// Map the prcess to the actual physcial page
 		invertedPageTable[phyPage].ppn = this.processID;
 		invertedPageTable[phyPage].vpn = faultPage;
 
+    //if( pageTable[faultPage].dirty && !pageTable[faultPage].readOnly) {
+  	if( pageTable[faultPage].vpn >= 0 ) {
+			swapIn( this, faultPage );
+
+			// Wipe the plate clean
+			//pageTable[faultPage].valid = true;
+			pageTable[faultPage].dirty = false;
+			pageTable[faultPage].used = false;
+			pageTable[faultPage].readOnly = false;
+			//pageTable[faultPage].readOnly = false;
+		
+		}
 		// when the page has not been loaded before
-		if( !pageTable[faultPage].used || pageTable[faultPage].vpn < 0) {
+		else if( !pageTable[faultPage].used || pageTable[faultPage].vpn < 0 ) {
 		  int s = 0;
 			boolean loaded = false;
 		  // Get the appropriate data into the physical page
-      for( ; s < coff.getNumSections() ; s++ ) {
+      for( ; s < coff.getNumSections() && !loaded; s++ ) {
         CoffSection section = coff.getSection(s);
 
 			  for( int i = 0 ; i < section.getLength() ; i++ ) {
           int vpn = section.getFirstVPN() + i;
+//System.out.println( "In section " + section.getName() + " with page " + vpn );
 				  // If we found the page we are faulting on
 				  if( faultPage == vpn ) {
             section.loadPage(i, pageTable[faultPage].ppn );
 					  if( section.isReadOnly() ) pageTable[faultPage].readOnly = true;
 						else pageTable[faultPage].readOnly = false;
 
+//System.out.println( "loading page " + vpn + " at section " + section.getName());
 						loaded = true;
 					  break;
 				  }
@@ -423,24 +440,28 @@ System.out.println( t.vpn + " " + t.ppn + " " + t.valid + " " + t.dirty + " "
 			  System.arraycopy( zeroFill, 0, Machine.processor().getMemory(), 
 			                  phyPage * pageSize, pageSize );
 				pageTable[faultPage].readOnly = false;
+				pageTable[faultPage].dirty = false;
 		  }  
 
-		  pageTable[faultPage].valid = true;
-			//pageTable[faultPage].vpn = faultPage;
+		  //pageTable[faultPage].valid = true;
 		}
-		else { // WHen the page has been swaped out before
+	/*	else { // WHen the page has been swaped out before
 		  // We read it back from the swap file
 			swapIn( this, faultPage );
 
 			// Wipe the plate clean
 			pageTable[faultPage].valid = true;
-			pageTable[faultPage].dirty = false;
+			pageTable[faultPage].dirty = true;
 			pageTable[faultPage].used = true;
+			pageTable[faultPage].readOnly = false;
 			//pageTable[faultPage].readOnly = false;
 		      
-		}
+		}*/
     //invertedPageTable[phyPage].valid = true;
-		invertedPageTable[phyPage].dirty = false;	
+		//invertedPageTable[phyPage].dirty = false;	
+		pageTable[faultPage].valid = true;
+		//pageTable[faultPage].dirty = true;
+		pageTable[faultPage].used = false;
 
 		return 1;
 	}
@@ -449,80 +470,68 @@ System.out.println( t.vpn + " " + t.ppn + " " + t.valid + " " + t.dirty + " "
   public int swapOut(){
 		while( true ){
 //System.out.println("In swapping " + clockHand );
-		  clockHand++;
+		  //clockHand++;
 		  // Advance the clock hand until we find one that has not been used
-			if( clockHand >= Machine.processor().getNumPhysPages() ) clockHand = 0;
+			//if( clockHand >= Machine.processor().getNumPhysPages() ) clockHand = 0;
 
+      clockHand --;
+			if( clockHand < 0 ) clockHand = Machine.processor().getNumPhysPages()-1;
 			// If we see a page that has been used
       if( invertedPageTable[clockHand].used )
 			  invertedPageTable[clockHand].used = false;
 			else { // Otherwise we have chosen our victim
-//System.out.println("We are swapping out physical page: " + clockHand ); 
 			  // Get the process that's using the physical page
 			  VMProcess process = (VMProcess)VMKernel.allProcesses.get(
 					                                    invertedPageTable[clockHand].ppn);
 				// Updite its page table
 			  int visPageNum = invertedPageTable[clockHand].vpn;	
-        //for( int i = 0; i < process.pageTable.length ; i++ ) {
-          //if( process.pageTable[i].ppn == clockHand ) {
             process.pageTable[visPageNum].valid = false;
-//System.out.println( "setting page " + visPageNum + " to " + pageTable[visPageNum].valid );
-            
-/*for( int j = 0 ; j < pageTable.length ; j++ ) {
-TranslationEntry temp = pageTable[j];
-System.out.println( temp.vpn + " " + temp.ppn + " " + temp.valid + " " + 
-temp.readOnly + " " + temp.used + " " + temp.dirty);
-}*/
-						//visPageNum = i;
-					//	break;
-					//}
-				//}
-        
-				if( process.pageTable[visPageNum].dirty || 
+						pageTable[visPageNum].dirty = false;
+
+//System.out.println( "setting page " + visPageNum + " to " + pageTable[visPageNum].valid );        
+				if( //process.pageTable[visPageNum].dirty && 
 				    !process.pageTable[visPageNum].readOnly ){
 				  // We need to write the file out to swap
-          OpenFile swapFile = ThreadedKernel.fileSystem.open( swapFileName, true);
+          //OpenFile swapFile = ThreadedKernel.fileSystem.open( swapFileName, true);
 					
 					// See if the virtual page has a swap pos already
 					int filePost = -1;
-					if( process.pageTable[visPageNum].vpn < 0 ) 
-					  filePost = VMKernel.giveSwapPage();
+					if( process.pageTable[visPageNum].vpn < 0 ) {
+					  System.out.println( "Pgae " + visPageNum
+						                    + " at process " + process.processID + 
+																" not swapped to file before!" );
+						filePost = VMKernel.giveSwapPage();
+						process.pageTable[visPageNum].vpn = filePost;
+//System.out.println( "Assigning " + filePost + " to page " + visPageNum );
+					}
 					else filePost = process.pageTable[visPageNum].vpn;
 //System.out.println( "We are writing to file at " + filePost + " to write vpage " + visPageNum);
 					int bitsWrote = swapFile.write( filePost * pageSize, 
 					                Machine.processor().getMemory(),
 					                clockHand*pageSize, pageSize );
 
-//System.out.println( "We write " + bitsWrote + " bits" );
-					// Record the spn in the virtual page number
-					process.pageTable[visPageNum].vpn = filePost;
-					
-					swapFile.close();
+//System.out.println( "We write " + bitsWrote + " bits" );					
+				//	swapFile.close();
 				}
 
-        invertedPageTable[clockHand].dirty = false;
 				invertedPageTable[clockHand].used = true;
-/*for( int j = 0 ; j < invertedPageTable.length ; j++ ) {
-TranslationEntry temp = invertedPageTable[j];
-System.out.println( "iverted page talbe " + temp.vpn + " " + temp.ppn + " " + temp.valid + " " + 
-temp.readOnly + " " + temp.used + " " + temp.dirty);
-}*/
 
-//System.out.println( "reached return in swap out." );	
 				return clockHand;
 			}// end of else
 		}
 	}
 
 	public int swapIn( VMProcess process, int faultPage ) {
-    OpenFile swapFile = ThreadedKernel.fileSystem.open( swapFileName, false );
+//System.out.println( "In swapping in" );
+    //OpenFile swapFile = ThreadedKernel.fileSystem.open( swapFileName, false );
 		int filePost = process.pageTable[faultPage].vpn; // The spn
 //System.out.println( "We need file at position " + filePost + " to get vpage " + faultPage);
 		// REad from the file and load it into the page
-		swapFile.read( filePost*pageSize,
+		int bytesRead = swapFile.read( filePost*pageSize,
 		               Machine.processor().getMemory(),
 									 process.pageTable[faultPage].ppn * pageSize, pageSize );
-		swapFile.close();
+//System.out.println( "We read " + bytesRead + " bytes from swap" );
+		//swapFile.close();
 		return 1;
 	}
 }

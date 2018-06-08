@@ -26,11 +26,12 @@ main()
 	     C[i][j] = 0;
 	}
 
+//printf( "INITIALIZED\n");
     for (i = 0; i < Dim; i++)		/* then multiply them together */
 	for (j = 0; j < Dim; j++)
             for (k = 0; k < Dim; k++)
 		 C[i][j] += A[i][k] * B[k][j];
 
-    //printf("C[%d][%d] = %d\n", Dim-1, Dim-1, C[Dim-1][Dim-1]);
+  //  printf("C[%d][%d] = %d****************************************************\n", Dim-1, Dim-1, C[Dim-1][Dim-1]);
     return (C[Dim-1][Dim-1]);		/* and then we're done */
 }
