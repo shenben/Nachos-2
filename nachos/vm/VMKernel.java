@@ -4,6 +4,7 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
+import java.util.*;
 
 /**
  * A kernel that can support multiple demand-paging user processes.
@@ -21,6 +22,13 @@ public class VMKernel extends UserKernel {
 	 */
 	public void initialize(String[] args) {
 		super.initialize(args);
+		boolean intStatus = Machine.interrupt().disable();
+		if( freeSwapPages == null ) {
+      freeSwapPages = new LinkedList<Integer>();
+			swapLock = new Lock();
+			swapFile = ThreadedKernel.fileSystem.open( swapFileName, true );
+		}
+		Machine.interrupt().restore(intStatus);
 	}
 
 	/**
@@ -45,7 +53,22 @@ public class VMKernel extends UserKernel {
 	}
 
 	// dummy variables to make javac smarter
+	public static OpenFile swapFile;
+	public final String swapFileName = "swapeanut";
+
 	private static VMProcess dummy1 = null;
 
 	private static final char dbgVM = 'v';
+
+	public static LinkedList<Integer> freeSwapPages;
+
+	public static Lock swapLock;
+
+	public static int giveSwapPage(){
+    swapLock.acquire();
+		int swapPage = freeSwapPages.size();
+		freeSwapPages.add(swapPage);
+		swapLock.release();
+		return swapPage;
+	}
 }
