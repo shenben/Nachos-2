@@ -10,8 +10,32 @@ Natalie Popescu, Yue Zhu, Venatesh Kumar
 Code Description
 ________________
 
-  We first implemented demand paging and lazy loading but first initializing all the virtual pages to 
-  invalid, then creating handlePageFault() method. This method is called when the program hits an 
-  invalid virtual page, and will load the corresponding page from either coff section (if the page
-  does not have the used bit set and has a virtual page number within coff section), stack( if the 
-  page is not used and is not within the coff section) or the swapfile
+  We first implemented demand paging and lazy loading by first initializing all the virtual pages to 
+  map to invalid physical pages, then creating the handlePageFault() method. This method is called 
+  when the program hits an invalid virtual page, and will load the corresponding page from either 
+  coff section (if the page does not have the used bit set and has a virtual page number within coff 
+  section), stack (if the page is not used and is not within the coff section), the swapfile (if the 
+  page has been swapped out before), or 0-filled (the first time a stack/argument page is loaded). 
+  Once a page was swapped out to the swap file, it would always be read back from the swap file (never
+  0-filled or loaded from the coff section again). 
+  
+  Then we implemented the clock eviction algorithm for a single processes that would need more virtual 
+  pages than the number of physical pages available. This involved initially checking the unoccupied 
+  physical pages and allocating those to the process, and then when no more free physical pages exist 
+  then iterating through the data structure of used pages, checking each one to see if it has been used 
+  since the last time it was visited. If so, then the used bit is cleared, and then next page is checked. 
+  Otherwise, if the physical page has been written to then the contents are written out to the swap file. 
+  Then the physical page is freed for the asking process to use. If all physical pages were used, and the
+  clock algorithm has checked all physical pages, then the very next paged is selected as an eviction 
+  victim. 
+  
+  Once this implementation worked with a single process, we began to introduce multiple processes. This 
+  required us to put locks around critical sections and shared data structures such that the page tables, 
+  inverted page table, and other tracking data structures would not be corrupted. We also added pinning 
+  functionality to our read and write virtual memory methods to further avoid data corruption. This 
+  affected our clock algorithm in such a way that we needed to add a condition variable that would put 
+  threads to sleep when there weren't any unpinned pages in memory, and wake them back up when a page was 
+  unpinned. 
+  
+  We generally worked in parallel on our own code but came together towards the due date to exchange 
+  ideas, debugging hints, and to test. 
