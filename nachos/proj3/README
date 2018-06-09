@@ -1,0 +1,17 @@
+/*
+ * Project 3 README
+ */
+ 
+Group members 
+_____________
+
+Natalie Popescu, Yue Zhu, Venatesh Kumar
+
+Code Description
+________________
+
+  We first implemented demand paging and lazy loading but first initializing all the virtual pages to 
+  invalid, then creating handlePageFault() method. This method is called when the program hits an 
+  invalid virtual page, and will load the corresponding page from either coff section (if the page
+  does not have the used bit set and has a virtual page number within coff section), stack( if the 
+  page is not used and is not within the coff section) or the swapfile
