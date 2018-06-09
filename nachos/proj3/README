@@ -38,4 +38,7 @@ ________________
   unpinned. 
   
   We generally worked in parallel on our own code but came together towards the due date to exchange 
-  ideas, debugging hints, and to test. 
+  ideas, debugging hints, and to test. We mostly tested with only swap4, swap5, and matmult for single
+  processes, and then simple mulitprogramming tests that would call exec on one or more of the single-
+  process tests. These were helpful enough for our debugging purposes. 
+  
